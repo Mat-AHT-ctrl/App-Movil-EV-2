@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {
-                // Ignore if persistable permission cannot be taken
+                Toast.makeText(this, "No se puede acceder al archivo", Toast.LENGTH_SHORT).show()
             }
             val fileName = getFileName(uri) ?: uri.lastPathSegment ?: "Archivo"
             viewModel.agregarArchivo(fileName, uri)
