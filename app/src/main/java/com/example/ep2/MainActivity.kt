@@ -35,11 +35,10 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppNavigator() {
-    // Variable de estado para controlar la pantalla actual sin usar librerías de navegación
+
     var currentScreen by remember { mutableStateOf("login") }
     var espacioSeleccionadoParaFormulario by remember { mutableStateOf("") }
 
-    // Lista reactiva global de solicitudes
     val listaSolicitudes = remember {
         mutableStateListOf(
             SolicitudReserva(
@@ -59,7 +58,6 @@ fun MainAppNavigator() {
         )
     }
 
-    // Ocultar las barras superior e inferior en las pantallas de Login y Registro
     val mostrarBarras = currentScreen != "login" && currentScreen != "register"
 
     Scaffold(
@@ -103,7 +101,6 @@ fun MainAppNavigator() {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Cambio de pantalla condicional (Sin dependencias de navegación)
             when (currentScreen) {
                 "login" -> LoginScreen(
                     onLoginSuccess = { _ ->
