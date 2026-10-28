@@ -15,6 +15,7 @@ fun RegisterScreen(
 ) {
     var usuario by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMensaje by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -32,7 +33,7 @@ fun RegisterScreen(
 
         OutlinedTextField(
             value = usuario,
-            onValueChange = { usuario = it },
+            onValueChange = { usuario = it; errorMensaje = "" },
             label = { Text("Nombre de Usuario") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -41,16 +42,30 @@ fun RegisterScreen(
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { password = it; errorMensaje = "" },
             label = { Text("Contraseña") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (errorMensaje.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = errorMensaje, color = MaterialTheme.colorScheme.error)
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { onRegisterSuccess() },
+            onClick = {
+                if (usuario.isBlank() || password.isBlank()) {
+                    errorMensaje = "Todos los campos son obligatorios"
+                } else if (password.length < 4) {
+                    errorMensaje = "La contraseña debe tener al menos 4 caracteres"
+                } else {
+                    onRegisterSuccess()
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Registrarse")

@@ -15,6 +15,7 @@ fun LoginScreen(
 ) {
     var usuario by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMensaje by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -38,7 +39,7 @@ fun LoginScreen(
 
         OutlinedTextField(
             value = usuario,
-            onValueChange = { usuario = it },
+            onValueChange = { usuario = it; errorMensaje = "" },
             label = { Text("Correo o Usuario") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -47,18 +48,27 @@ fun LoginScreen(
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { password = it; errorMensaje = "" },
             label = { Text("Contraseña") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (errorMensaje.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = errorMensaje, color = MaterialTheme.colorScheme.error)
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = {
-                val userText = if (usuario.isBlank()) "Usuario" else usuario
-                onLoginSuccess(userText)
+                if (usuario.isBlank() || password.isBlank()) {
+                    errorMensaje = "Por favor, completa todos los campos"
+                } else {
+                    onLoginSuccess(usuario)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -72,4 +82,3 @@ fun LoginScreen(
         }
     }
 }
-
