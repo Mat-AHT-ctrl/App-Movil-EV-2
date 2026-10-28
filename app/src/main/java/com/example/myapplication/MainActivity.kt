@@ -10,67 +10,43 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.Slideshow
-import androidx.compose.material.icons.filled.TableChart
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.ep2.LoginScreen
-import com.example.ep2.RegisterScreen
-import com.example.ep2.model.SolicitudReserva
-import com.example.ep2.ui.screens.AdminScreen
-import com.example.ep2.ui.screens.CatalogoScreen
-import com.example.ep2.ui.screens.FormularioScreen
 import com.example.myapplication.model.ArchivoItem
-import com.example.myapplication.model.TipoArchivo
 import com.example.myapplication.ui.MainViewModel
 import com.example.myapplication.ui.theme.MyApplicationTheme
+
+// Modelos necesarios
+data class SolicitudReserva(
+    val id: String,
+    val espacioId: String,
+    val espacioNombre: String,
+    val solicitante: String,
+    val perfil: String,
+    val actividad: String,
+    val cursoGrupo: String,
+    val asistentes: Int,
+    val fechaReserva: String,
+    val horaInicio: String,
+    val horaTermino: String,
+    val estadoSolicitud: String,
+    val justificacionRechazo: String = ""
+)
+
+data class Espacio(
+    val id: String,
+    val nombre: String,
+    val descripcion: String
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -99,56 +75,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                val selectedTab = viewModel.selectedTab.intValue
-
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { Text("App Colegio") },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        )
-                    },
-                    bottomBar = {
-                        NavigationBar {
-                            NavigationBarItem(
-                                selected = selectedTab == 0,
-                                onClick = { viewModel.selectTab(0) },
-                                icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-                                label = { Text("Inicio") }
-                            )
-                            NavigationBarItem(
-                                selected = selectedTab == 1,
-                                onClick = { viewModel.selectTab(1) },
-                                icon = { Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = "Archivos") },
-                                label = { Text("Archivos") }
-                            )
-                        }
-                    }
-                ) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(16.dp)
-                    ) {
-                        if (selectedTab == 0) {
-                            HomeScreen(
-                                modifier = Modifier.weight(1f),
-                                onGoToFiles = { viewModel.selectTab(1) }
-                            )
-                        } else {
-                            ArchivosScreen(
-                                archivos = viewModel.archivos,
-                                onAddFile = { openDocument.launch(arrayOf("*/*")) },
-                                onDeleteFile = { archivo -> viewModel.eliminarArchivo(archivo) },
-                                onOpenFile = { archivo -> abrirArchivo(archivo) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
+                MainAppNavigator()
             }
         }
     }
@@ -195,373 +122,422 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-private fun HomeScreen(
-    modifier: Modifier = Modifier,
-    onGoToFiles: () -> Unit
-) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Home,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(72.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Bienvenido a App Colegio",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Gestión de documentos y archivos escolares",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onGoToFiles) {
-            Text("Ver Archivos")
-        }
-    }
-}
-
-@Composable
-private fun ArchivosScreen(
-    archivos: List<ArchivoItem>,
-    onAddFile: () -> Unit,
-    onDeleteFile: (ArchivoItem) -> Unit,
-    onOpenFile: (ArchivoItem) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            text = "Archivos",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = onAddFile,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Agregar",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Cargar archivo (PDF/Word/etc.)")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "${archivos.size} archivo(s)",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (archivos.isEmpty()) {
-            EmptyState(modifier = Modifier.weight(1f))
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(archivos, key = { it.id }) { archivo ->
-                    FileCard(
-                        archivo = archivo,
-                        onDelete = { onDeleteFile(archivo) },
-                        onClick = { onOpenFile(archivo) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-            modifier = Modifier.size(64.dp)
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "No hay archivos",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Carga tu primer documento PDF, Word, Imagen u otro",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FileCard(
-    archivo: ArchivoItem,
-    onDelete: () -> Unit,
-    onClick: () -> Unit
-) {
-    val (icon, iconColor, tipoNombre) = when (archivo.tipo) {
-        TipoArchivo.PDF -> Triple(Icons.Default.PictureAsPdf, Color(0xFFE53935), "PDF")
-        TipoArchivo.WORD -> Triple(Icons.Default.Description, Color(0xFF1E88E5), "Word")
-        TipoArchivo.EXCEL -> Triple(Icons.Default.TableChart, Color(0xFF43A047), "Excel")
-        TipoArchivo.POWERPOINT -> Triple(Icons.Default.Slideshow, Color(0xFFFB8C00), "PowerPoint")
-        TipoArchivo.IMAGEN -> Triple(Icons.Default.Image, Color(0xFF8E24AA), "Imagen")
-        TipoArchivo.OTRO -> Triple(Icons.AutoMirrored.Filled.InsertDriveFile, Color(0xFF757575), "Documento")
-    }
+fun MainAppNavigator() {
+    var currentScreen by remember { mutableStateOf("login") }
+    var espacioSeleccionadoParaFormulario by remember { mutableStateOf("") }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        color = iconColor.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = tipoNombre,
-                    tint = iconColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = archivo.nombre,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
-                )
-                Text(
-                    text = tipoNombre,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Eliminar",
-                    tint = MaterialTheme.colorScheme.error
-                )
-            }
-        }
-    }
-
-    @Composable
-    fun MainAppNavigator() {
-
-        var currentScreen by remember { mutableStateOf("login") }
-        var espacioSeleccionadoParaFormulario by remember { mutableStateOf("") }
-
-        val listaSolicitudes = remember {
-            mutableStateListOf(
-                SolicitudReserva(
-                    id = "1",
-                    espacioId = "1",
-                    espacioNombre = "Laboratorio de Computación",
-                    solicitante = "Juan Pérez",
-                    perfil = "Docente",
-                    actividad = "Clase práctica de programación",
-                    cursoGrupo = "3° Medio A",
-                    asistentes = 25,
-                    fechaReserva = "2026-11-10",
-                    horaInicio = "10:00",
-                    horaTermino = "11:30",
-                    estadoSolicitud = "pendiente"
-                )
+    val listaSolicitudes = remember {
+        mutableStateListOf(
+            SolicitudReserva(
+                id = "1",
+                espacioId = "1",
+                espacioNombre = "Laboratorio de Computación",
+                solicitante = "Juan Pérez",
+                perfil = "Docente",
+                actividad = "Clase práctica de programación",
+                cursoGrupo = "3° Medio A",
+                asistentes = 25,
+                fechaReserva = "2026-11-10",
+                horaInicio = "10:00",
+                horaTermino = "11:30",
+                estadoSolicitud = "pendiente"
             )
-        }
+        )
+    }
 
-        val mostrarBarras = currentScreen != "login" && currentScreen != "register"
+    val mostrarBarras = currentScreen != "login" && currentScreen != "register"
 
-        Scaffold(
-            topBar = {
-                if (mostrarBarras) {
-                    TopAppBar(
-                        title = { Text("Escuela Marcela Paz - Reservas") },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
+    Scaffold(
+        topBar = {
+            if (mostrarBarras) {
+                TopAppBar(
+                    title = { Text("Escuela Marcela Paz - Reservas") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+            }
+        },
+        bottomBar = {
+            if (mostrarBarras) {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Text("🏠") },
+                        label = { Text("Catálogo") },
+                        selected = currentScreen == "catalogo",
+                        onClick = { currentScreen = "catalogo" }
+                    )
+                    NavigationBarItem(
+                        icon = { Text("📋") },
+                        label = { Text("Admin") },
+                        selected = currentScreen == "admin",
+                        onClick = { currentScreen = "admin" }
+                    )
+                    NavigationBarItem(
+                        icon = { Text("🚪") },
+                        label = { Text("Salir") },
+                        selected = false,
+                        onClick = { currentScreen = "login" }
                     )
                 }
+            }
+        }
+    ) { paddingValues ->
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (currentScreen) {
+                "login" -> LoginScreen(
+                    onLoginSuccess = { _ -> currentScreen = "catalogo" },
+                    onNavigateToRegister = { currentScreen = "register" }
+                )
+
+                "register" -> RegisterScreen(
+                    onRegisterSuccess = { currentScreen = "login" },
+                    onBackToLogin = { currentScreen = "login" }
+                )
+
+                "catalogo" -> CatalogoScreen(
+                    onEspacioSelected = { espacio ->
+                        espacioSeleccionadoParaFormulario = espacio.nombre
+                        currentScreen = "formulario"
+                    },
+                    onNavigateToAdmin = { currentScreen = "admin" },
+                    onNavigateToMisReservas = {}
+                )
+
+                "formulario" -> FormularioScreen(
+                    espacioNombre = espacioSeleccionadoParaFormulario,
+                    onEnviarSolicitud = { actividad, cursoGrupo, asistentes, fecha, hInicio, hTermino ->
+                        val nuevaSolicitud = SolicitudReserva(
+                            id = System.currentTimeMillis().toString(),
+                            espacioId = "0",
+                            espacioNombre = espacioSeleccionadoParaFormulario,
+                            solicitante = "Usuario Actual",
+                            perfil = "Docente",
+                            actividad = actividad,
+                            cursoGrupo = cursoGrupo,
+                            asistentes = asistentes.toIntOrNull() ?: 1,
+                            fechaReserva = fecha,
+                            horaInicio = hInicio,
+                            horaTermino = hTermino,
+                            estadoSolicitud = "pendiente"
+                        )
+                        listaSolicitudes.add(nuevaSolicitud)
+                        currentScreen = "catalogo"
+                    },
+                    onVolver = { currentScreen = "catalogo" }
+                )
+
+                "admin" -> AdminScreen(
+                    solicitudes = listaSolicitudes,
+                    onAprobar = { id ->
+                        val index = listaSolicitudes.indexOfFirst { it.id == id }
+                        if (index != -1) {
+                            val item = listaSolicitudes[index]
+                            listaSolicitudes[index] = item.copy(estadoSolicitud = "aceptada")
+                        }
+                    },
+                    onRechazar = { id, _ ->
+                        val index = listaSolicitudes.indexOfFirst { it.id == id }
+                        if (index != -1) {
+                            val item = listaSolicitudes[index]
+                            listaSolicitudes[index] = item.copy(
+                                estadoSolicitud = "rechazada",
+                                justificacionRechazo = "No disponible"
+                            )
+                        }
+                    },
+                    onVolver = { currentScreen = "catalogo" }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LoginScreen(
+    onLoginSuccess: (String) -> Unit,
+    onNavigateToRegister: () -> Unit
+) {
+    var usuario by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMensaje by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(text = "Escuela Marcela Paz", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = "Portal de Reservas", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OutlinedTextField(
+            value = usuario,
+            onValueChange = { usuario = it; errorMensaje = "" },
+            label = { Text("Correo o Usuario") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it; errorMensaje = "" },
+            label = { Text("Contraseña") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (errorMensaje.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = errorMensaje, color = MaterialTheme.colorScheme.error)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = {
+                if (usuario.isBlank() || password.isBlank()) {
+                    errorMensaje = "Por favor, completa todos los campos"
+                } else {
+                    onLoginSuccess(usuario)
+                }
             },
-            bottomBar = {
-                if (mostrarBarras) {
-                    NavigationBar {
-                        NavigationBarItem(
-                            icon = { Text("🏠") },
-                            label = { Text("Catálogo") },
-                            selected = currentScreen == "catalogo",
-                            onClick = { currentScreen = "catalogo" }
-                        )
-                        NavigationBarItem(
-                            icon = { Text("📋") },
-                            label = { Text("Admin") },
-                            selected = currentScreen == "admin",
-                            onClick = { currentScreen = "admin" }
-                        )
-                        NavigationBarItem(
-                            icon = { Text("🚪") },
-                            label = { Text("Salir") },
-                            selected = false,
-                            onClick = { currentScreen = "login" }
-                        )
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ingresar")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onNavigateToRegister) {
+            Text("¿No tienes cuenta? Regístrate aquí")
+        }
+    }
+}
+
+@Composable
+fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
+    onBackToLogin: () -> Unit
+) {
+    var usuario by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMensaje by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(text = "Crear Cuenta", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = usuario,
+            onValueChange = { usuario = it; errorMensaje = "" },
+            label = { Text("Nombre de Usuario") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it; errorMensaje = "" },
+            label = { Text("Contraseña") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (errorMensaje.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = errorMensaje, color = MaterialTheme.colorScheme.error)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = {
+                if (usuario.isBlank() || password.isBlank()) {
+                    errorMensaje = "Todos los campos son obligatorios"
+                } else if (password.length < 4) {
+                    errorMensaje = "La contraseña debe tener al menos 4 caracteres"
+                } else {
+                    onRegisterSuccess()
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Registrarse")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onBackToLogin) {
+            Text("¿Ya tienes cuenta? Inicia sesión")
+        }
+    }
+}
+
+@Composable
+fun CatalogoScreen(
+    onEspacioSelected: (Espacio) -> Unit,
+    onNavigateToAdmin: () -> Unit,
+    onNavigateToMisReservas: () -> Unit
+) {
+    val espacios = listOf(
+        Espacio("1", "Laboratorio de Computación", "Equipado con 30 PCs, proyector y red de alta velocidad."),
+        Espacio("2", "Gimnasio Techado", "Cancha multideporte para básquetbol, vóleibol y eventos escolares."),
+        Espacio("3", "Sala Audiovisual", "Butacas cómodas, pantalla gigante y sistema de sonido surround."),
+        Espacio("4", "Biblioteca Central", "Espacio silencioso para estudio y lectura grupal o individual.")
+    )
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text(text = "Espacios Disponibles", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(espacios) { espacio ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onEspacioSelected(espacio) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = espacio.nombre, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = espacio.descripcion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-        ) { paddingValues ->
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                when (currentScreen) {
-                    "login" -> LoginScreen(
-                        onLoginSuccess = { _ ->
-                            currentScreen = "catalogo"
-                        },
-                        onNavigateToRegister = {
-                            currentScreen = "register"
-                        }
-                    )
+        }
+    }
+}
 
-                    "register" -> RegisterScreen(
-                        onRegisterSuccess = {
-                            currentScreen = "login"
-                        },
-                        onBackToLogin = {
-                            currentScreen = "login"
-                        }
-                    )
+@Composable
+fun FormularioScreen(
+    espacioNombre: String,
+    onEnviarSolicitud: (String, String, String, String, String, String) -> Unit,
+    onVolver: () -> Unit
+) {
+    var actividad by remember { mutableStateOf("") }
+    var cursoGrupo by remember { mutableStateOf("") }
+    var asistentes by remember { mutableStateOf("") }
+    var fecha by remember { mutableStateOf("2026-11-15") }
+    var horaInicio by remember { mutableStateOf("10:00") }
+    var horaTermino by remember { mutableStateOf("11:30") }
+    var errorMensaje by remember { mutableStateOf("") }
 
-                    "catalogo" -> CatalogoScreen(
-                        onEspacioSelected = { espacio ->
-                            espacioSeleccionadoParaFormulario = espacio.nombre
-                            currentScreen = "formulario"
-                        },
-                        onNavigateToAdmin = {
-                            currentScreen = "admin"
-                        },
-                        onNavigateToMisReservas = {}
-                    )
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = "Reservar: $espacioNombre", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
 
-                    "formulario" -> FormularioScreen(
-                        espacioNombre = espacioSeleccionadoParaFormulario,
-                        onEnviarSolicitud = { actividad, cursoGrupo, asistentes, fecha, hInicio, hTermino ->
-                            val nuevaSolicitud = SolicitudReserva(
-                                id = System.currentTimeMillis().toString(),
-                                espacioId = "0",
-                                espacioNombre = espacioSeleccionadoParaFormulario,
-                                solicitante = "Usuario Actual",
-                                perfil = "Docente",
-                                actividad = actividad,
-                                cursoGrupo = cursoGrupo,
-                                asistentes = asistentes.toIntOrNull() ?: 1,
-                                fechaReserva = fecha,
-                                horaInicio = hInicio,
-                                horaTermino = hTermino,
-                                estadoSolicitud = "pendiente"
+        OutlinedTextField(value = actividad, onValueChange = { actividad = it; errorMensaje = "" }, label = { Text("Actividad o Motivo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = cursoGrupo, onValueChange = { cursoGrupo = it; errorMensaje = "" }, label = { Text("Curso o Grupo (ej: 3° Medio A)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = asistentes, onValueChange = { asistentes = it; errorMensaje = "" }, label = { Text("Cantidad de Asistentes") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = fecha, onValueChange = { fecha = it }, label = { Text("Fecha (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(value = horaInicio, onValueChange = { horaInicio = it }, label = { Text("Hora Inicio") }, modifier = Modifier.weight(1f), singleLine = true)
+            OutlinedTextField(value = horaTermino, onValueChange = { horaTermino = it }, label = { Text("Hora Término") }, modifier = Modifier.weight(1f), singleLine = true)
+        }
+
+        if (errorMensaje.isNotEmpty()) {
+            Text(text = errorMensaje, color = MaterialTheme.colorScheme.error)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                if (actividad.isBlank() || cursoGrupo.isBlank() || asistentes.isBlank()) {
+                    errorMensaje = "Por favor, completa los campos obligatorios"
+                } else if (asistentes.toIntOrNull() == null || asistentes.toInt() <= 0) {
+                    errorMensaje = "Ingresa un número válido de asistentes"
+                } else {
+                    onEnviarSolicitud(actividad, cursoGrupo, asistentes, fecha, horaInicio, horaTermino)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Enviar Solicitud de Reserva")
+        }
+
+        TextButton(onClick = onVolver, modifier = Modifier.fillMaxWidth()) {
+            Text("Cancelar y Volver")
+        }
+    }
+}
+
+@Composable
+fun AdminScreen(
+    solicitudes: List<SolicitudReserva>,
+    onAprobar: (String) -> Unit,
+    onRechazar: (String, String) -> Unit,
+    onVolver: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text(text = "Panel de Inspectoría", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (solicitudes.isEmpty()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(text = "No hay solicitudes registradas", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(solicitudes) { solicitud ->
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(text = solicitud.espacioNombre, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = "Solicitante: ${solicitud.solicitante} (${solicitud.perfil})")
+                            Text(text = "Actividad: ${solicitud.actividad} | Curso: ${solicitud.cursoGrupo}")
+                            Text(text = "Fecha: ${solicitud.fechaReserva} | ${solicitud.horaInicio} - ${solicitud.horaTermino}")
+                            Text(
+                                text = "Estado: ${solicitud.estadoSolicitud.uppercase()}",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = when (solicitud.estadoSolicitud) {
+                                    "aceptada" -> Color(0xFF43A047)
+                                    "rechazada" -> Color(0xFFE53935)
+                                    else -> Color(0xFFFB8C00)
+                                }
                             )
-                            listaSolicitudes.add(nuevaSolicitud)
-                            currentScreen = "catalogo"
-                        },
-                        onVolver = {
-                            currentScreen = "catalogo"
-                        }
-                    )
 
-                    "admin" -> AdminScreen(
-                        solicitudes = listaSolicitudes,
-                        onAprobar = { id ->
-                            val index = listaSolicitudes.indexOfFirst { it.id == id }
-                            if (index != -1) {
-                                val item = listaSolicitudes[index]
-                                listaSolicitudes[index] = item.copy(estadoSolicitud = "aceptada")
+                            if (solicitud.estadoSolicitud == "pendiente") {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(
+                                        onClick = { onAprobar(solicitud.id) },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF43A047))
+                                    ) {
+                                        Text("Aprobar")
+                                    }
+                                    Button(
+                                        onClick = { onRechazar(solicitud.id, "No disponible") },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+                                    ) {
+                                        Text("Rechazar")
+                                    }
+                                }
                             }
-                        },
-                        onRechazar = { id, justificacion ->
-                            val index = listaSolicitudes.indexOfFirst { it.id == id }
-                            if (index != -1) {
-                                val item = listaSolicitudes[index]
-                                listaSolicitudes[index] = item.copy(
-                                    estadoSolicitud = "rechazada",
-                                    justificacionRechazo = justificacion
-                                )
-                            }
-                        },
-                        onVolver = {
-                            currentScreen = "catalogo"
                         }
-                    )
+                    }
                 }
             }
         }
-    }
 
-    @Composable
-    fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
-        TODO("Not yet implemented")
-    }
-
-    @Composable
-    fun LoginScreen(onLoginSuccess: (String) -> Unit, onNavigateToRegister: () -> Unit) {
-        TODO("Not yet implemented")
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = onVolver, modifier = Modifier.fillMaxWidth()) {
+            Text("Volver al Catálogo")
+        }
     }
 }

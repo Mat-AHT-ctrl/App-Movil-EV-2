@@ -1,4 +1,4 @@
-package com.example.ep2.model
+package com.example.myapplication.model
 
 data class SolicitudReserva(
     val id: String,
@@ -13,5 +13,5 @@ data class SolicitudReserva(
     val horaInicio: String,
     val horaTermino: String,
     val estadoSolicitud: String,
-    val justificacionRechazo: String? = null
+    val justificacionRechazo: String = ""
 )

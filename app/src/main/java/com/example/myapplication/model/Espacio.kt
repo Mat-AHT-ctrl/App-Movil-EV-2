@@ -1,4 +1,4 @@
-package com.example.ep2.model
+package com.example.myapplication.model
 
 data class Espacio(
     val id: String,
