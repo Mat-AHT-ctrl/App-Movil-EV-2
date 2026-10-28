@@ -1,33 +1,26 @@
 package com.example.myapplication.model
 
-import android.net.Uri
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.util.UUID
 
-enum class TipoArchivo {
-    PDF,
-    WORD,
-    EXCEL,
-    POWERPOINT,
-    IMAGEN,
-    OTRO
-}
-
+@Entity(tableName = "archivos")
 data class ArchivoItem(
-    val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val nombre: String,
-    val uri: Uri? = null,
-    val tipo: TipoArchivo = determinarTipo(nombre)
+    val uri: String? = null,
+    val tipo: String = "OTRO"
 ) {
     companion object {
-        fun determinarTipo(nombreArchivo: String): TipoArchivo {
+        fun determinarTipo(nombreArchivo: String): String {
             val extension = nombreArchivo.substringAfterLast('.', "").lowercase()
             return when (extension) {
-                "pdf" -> TipoArchivo.PDF
-                "doc", "docx" -> TipoArchivo.WORD
-                "xls", "xlsx" -> TipoArchivo.EXCEL
-                "ppt", "pptx" -> TipoArchivo.POWERPOINT
-                "png", "jpg", "jpeg", "gif", "webp" -> TipoArchivo.IMAGEN
-                else -> TipoArchivo.OTRO
+                "pdf" -> "PDF"
+                "doc", "docx" -> "WORD"
+                "xls", "xlsx" -> "EXCEL"
+                "ppt", "pptx" -> "POWERPOINT"
+                "png", "jpg", "jpeg", "gif", "webp" -> "IMAGEN"
+                else -> "OTRO"
             }
         }
     }
