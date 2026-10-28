@@ -10,6 +10,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +30,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.model.ArchivoItem
 import com.example.myapplication.ui.MainViewModel
+import com.example.myapplication.ui.screens.AdminScreen
+import com.example.myapplication.ui.screens.CatalogoScreen
+import com.example.myapplication.ui.screens.FormularioScreen
+import com.example.myapplication.ui.screens.LoginScreen
+import com.example.myapplication.ui.screens.RegisterScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 // Modelos necesarios
@@ -190,70 +202,75 @@ fun MainAppNavigator() {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (currentScreen) {
-                "login" -> LoginScreen(
-                    onLoginSuccess = { _ -> currentScreen = "catalogo" },
-                    onNavigateToRegister = { currentScreen = "register" }
-                )
-
-                "register" -> RegisterScreen(
-                    onRegisterSuccess = { currentScreen = "login" },
-                    onBackToLogin = { currentScreen = "login" }
-                )
-
-                "catalogo" -> CatalogoScreen(
-                    onEspacioSelected = { espacio ->
-                        espacioSeleccionadoParaFormulario = espacio.nombre
-                        currentScreen = "formulario"
-                    },
-                    onNavigateToAdmin = { currentScreen = "admin" },
-                    onNavigateToMisReservas = {}
-                )
-
-                "formulario" -> FormularioScreen(
-                    espacioNombre = espacioSeleccionadoParaFormulario,
-                    onEnviarSolicitud = { actividad, cursoGrupo, asistentes, fecha, hInicio, hTermino ->
-                        val nuevaSolicitud = SolicitudReserva(
-                            id = System.currentTimeMillis().toString(),
-                            espacioId = "0",
-                            espacioNombre = espacioSeleccionadoParaFormulario,
-                            solicitante = "Usuario Actual",
-                            perfil = "Docente",
-                            actividad = actividad,
-                            cursoGrupo = cursoGrupo,
-                            asistentes = asistentes.toIntOrNull() ?: 1,
-                            fechaReserva = fecha,
-                            horaInicio = hInicio,
-                            horaTermino = hTermino,
-                            estadoSolicitud = "pendiente"
-                        )
-                        listaSolicitudes.add(nuevaSolicitud)
-                        currentScreen = "catalogo"
-                    },
-                    onVolver = { currentScreen = "catalogo" }
-                )
-
-                "admin" -> AdminScreen(
-                    solicitudes = listaSolicitudes,
-                    onAprobar = { id ->
-                        val index = listaSolicitudes.indexOfFirst { it.id == id }
-                        if (index != -1) {
-                            val item = listaSolicitudes[index]
-                            listaSolicitudes[index] = item.copy(estadoSolicitud = "aceptada")
-                        }
-                    },
-                    onRechazar = { id, _ ->
-                        val index = listaSolicitudes.indexOfFirst { it.id == id }
-                        if (index != -1) {
-                            val item = listaSolicitudes[index]
-                            listaSolicitudes[index] = item.copy(
-                                estadoSolicitud = "rechazada",
-                                justificacionRechazo = "No disponible"
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { it / 4 }) togetherWith
+                            fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { -it / 4 })
+                },
+                label = "transicion_pantallas"
+            ) { screen ->
+                when (screen) {
+                    "login" -> LoginScreen(
+                        onLoginSuccess = { _ -> currentScreen = "catalogo" },
+                        onNavigateToRegister = { currentScreen = "register" }
+                    )
+                    "register" -> RegisterScreen(
+                        onRegisterSuccess = { currentScreen = "login" },
+                        onBackToLogin = { currentScreen = "login" }
+                    )
+                    "catalogo" -> CatalogoScreen(
+                        onEspacioSelected = { espacio ->
+                            espacioSeleccionadoParaFormulario = espacio.nombre
+                            currentScreen = "formulario"
+                        },
+                        onNavigateToAdmin = { currentScreen = "admin" },
+                        onNavigateToMisReservas = {}
+                    )
+                    "formulario" -> FormularioScreen(
+                        espacioNombre = espacioSeleccionadoParaFormulario,
+                        onEnviarSolicitud = { actividad, cursoGrupo, asistentes, fecha, hInicio, hTermino ->
+                            val nuevaSolicitud = SolicitudReserva(
+                                id = System.currentTimeMillis().toString(),
+                                espacioId = "0",
+                                espacioNombre = espacioSeleccionadoParaFormulario,
+                                solicitante = "Usuario Actual",
+                                perfil = "Docente",
+                                actividad = actividad,
+                                cursoGrupo = cursoGrupo,
+                                asistentes = asistentes.toIntOrNull() ?: 1,
+                                fechaReserva = fecha,
+                                horaInicio = hInicio,
+                                horaTermino = hTermino,
+                                estadoSolicitud = "pendiente"
                             )
-                        }
-                    },
-                    onVolver = { currentScreen = "catalogo" }
-                )
+                            listaSolicitudes.add(nuevaSolicitud)
+                            currentScreen = "catalogo"
+                        },
+                        onVolver = { currentScreen = "catalogo" }
+                    )
+                    "admin" -> AdminScreen(
+                        solicitudes = listaSolicitudes,
+                        onAprobar = { id ->
+                            val index = listaSolicitudes.indexOfFirst { it.id == id }
+                            if (index != -1) {
+                                val item = listaSolicitudes[index]
+                                listaSolicitudes[index] = item.copy(estadoSolicitud = "aceptada")
+                            }
+                        },
+                        onRechazar = { id, _ ->
+                            val index = listaSolicitudes.indexOfFirst { it.id == id }
+                            if (index != -1) {
+                                val item = listaSolicitudes[index]
+                                listaSolicitudes[index] = item.copy(
+                                    estadoSolicitud = "rechazada",
+                                    justificacionRechazo = "No disponible"
+                                )
+                            }
+                        },
+                        onVolver = { currentScreen = "catalogo" }
+                    )
+                }
             }
         }
     }
