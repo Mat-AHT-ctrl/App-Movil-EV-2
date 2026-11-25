@@ -11,7 +11,9 @@ import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.DatabaseProvider
 import com.example.myapplication.data.remote.ApiResult
 import com.example.myapplication.data.remote.BackendRepository
+import com.example.myapplication.data.remote.EspacioDto
 import com.example.myapplication.data.remote.LoginResponseDto
+import com.example.myapplication.data.remote.toEspacio
 import com.example.myapplication.model.ArchivoItem
 import com.example.myapplication.model.Espacio
 import com.example.myapplication.model.Reserva
@@ -219,6 +221,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return database.espacioDao().getAll()
         }
         return lista
+    }
+
+    /**
+     * Trae los espacios reales del backend (Render + Neon).
+     * Si falla la red, devuelve Error para que la UI pueda decidir qué mostrar.
+     */
+    suspend fun listarEspaciosBackend(): ApiResult<List<Espacio>> =
+        try {
+            val resultado = backend.listarEspacios()
+            when (resultado) {
+                is ApiResult.Ok -> ApiResult.Ok(resultado.data.map { dto -> dto.toEspacio() })
+                is ApiResult.Error -> resultado
+            }
+        } catch (e: Exception) {
+            ApiResult.Error("ERROR_DESCONOCIDO", e.message ?: "Error al cargar espacios")
+        }
+
+    /**
+     * Devuelve los tipos de espacio únicos disponibles para los filtros del catálogo.
+     */
+    suspend fun obtenerTiposEspacio(): List<String> {
+        val espacios = getAllEspacios()
+        return listOf("Todos") + espacios.map { it.tipo }.distinct().sorted()
     }
 
     suspend fun crearEspaciosPredeterminados() {
