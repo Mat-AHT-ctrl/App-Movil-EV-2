@@ -70,12 +70,58 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         // Cargar preferencia de tema guardada
         darkTheme = prefs.getBoolean("dark_theme", false)
+        // Cargar sesión persistente (no resetea al girar el teléfono)
+        cargarSesion()
     }
 
     /** Cambia el tema claro/oscuro y lo persiste. */
     fun cambiarTema(activado: Boolean) {
         darkTheme = activado
         prefs.edit().putBoolean("dark_theme", activado).apply()
+    }
+
+    // ===== SESIÓN PERSISTENTE =====
+
+    /** Guarda la sesión activa en SharedPreferences. */
+    private fun guardarSesion() {
+        val remoto = usuarioRemoto ?: return
+        val editor = prefs.edit()
+        editor.putString("sesion_email", remoto.email)
+        editor.putString("sesion_nombre", remoto.nombre)
+        editor.putString("sesion_rol", remoto.rol)
+        editor.putString("sesion_perfil", remoto.perfil)
+        editor.putString("sesion_id", remoto.id)
+        editor.putBoolean("sesion_modoffline", modoOffline)
+        editor.apply()
+    }
+
+    /** Carga la sesión guardada si existe (evita reset al girar el teléfono). */
+    private fun cargarSesion() {
+        val email = prefs.getString("sesion_email", null) ?: return
+        val nombre = prefs.getString("sesion_nombre", null) ?: return
+        val rol = prefs.getString("sesion_rol", null) ?: return
+        val perfil = prefs.getString("sesion_perfil", null) ?: "DOCENTE"
+        val id = prefs.getString("sesion_id", null) ?: return
+        val modOffline = prefs.getBoolean("sesion_modoffline", false)
+
+        usuarioRemoto = LoginResponseDto(id = id, nombre = nombre, email = email, rol = rol, perfil = perfil)
+        _currentUser = Usuario(0, nombre, email, "", rol)
+        modoOffline = modOffline
+        if (!modoOffline) {
+            currentScreen = "catalogo"
+        }
+    }
+
+    /** Limpia la sesión persistente. */
+    private fun limpiarSesion() {
+        val editor = prefs.edit()
+        editor.remove("sesion_email")
+        editor.remove("sesion_nombre")
+        editor.remove("sesion_rol")
+        editor.remove("sesion_perfil")
+        editor.remove("sesion_id")
+        editor.remove("sesion_modoffline")
+        editor.apply()
     }
 
     /**
@@ -112,6 +158,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     actualizado
                 }
                 _currentUser = local
+                guardarSesion()
                 LoginResult.Ok
             }
 
@@ -133,17 +180,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    suspend fun register(nombre: String, email: String, password: String, rol: String): Boolean {
-        if (database.usuarioDao().getByEmail(email) != null) {
-            return false
-        }
-        val usuario = Usuario(0, nombre, email, password, rol)
-        val id = database.usuarioDao().insert(usuario)
-        _currentUser = usuario.copy(id = id.toInt())
-        return true
+    /**
+     * Registro de personal vía backend. El rol SIEMPRE es SOLICITANTE;
+     * el único ADMIN es el superusuario del backend (colegio.marcela.paz14@gmail.com).
+     * Nadie puede autoasignarse ADMIN desde la app.
+     */
+    suspend fun register(
+        nombre: String,
+        email: String,
+        password: String,
+        perfil: String
+    ): ApiResult<LoginResponseDto> {
+        return backend.registrar(
+            nombre = nombre.trim(),
+            email = email.trim().lowercase(),
+            password = password,
+            perfil = perfil
+        )
     }
 
     fun logout() {
+        limpiarSesion()
         _currentUser = null
         usuarioRemoto = null
         modoOffline = false
@@ -231,7 +288,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         // Se revisan una por una: si la app ya tenia las cuentas .edu,
         // igual se agregan las .cl que existen en el backend.
         val cuentas = listOf(
-            Usuario(0, "Inspectoría General", "admin@colegio.cl", "123456", "admin"),
+            Usuario(0, "Inspectoría General", "colegio.marcela.paz14@gmail.com", "Marcelapaz1", "admin"),
             Usuario(0, "Profesor de Aula", "docente@colegio.cl", "123456", "profesor"),
             Usuario(0, "Inspector Administrador", "admin@colegio.edu", "123456", "admin"),
             Usuario(0, "Profesor Juan Pérez", "profesor@colegio.edu", "123456", "profesor")

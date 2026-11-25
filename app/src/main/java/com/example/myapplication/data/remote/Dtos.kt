@@ -23,6 +23,14 @@ data class LoginResponseDto(
     val perfil: String    // INSPECTORIA | DOCENTE | UTP | DIRECCION | PIE
 )
 
+/** Registro de personal vía backend. */
+data class RegisterRequestDto(
+    val nombre: String,
+    val email: String,
+    val password: String,
+    val perfil: String    // INSPECTORIA | DOCENTE | UTP | DIRECCION | PIE
+)
+
 // ---------- Espacios ----------
 
 data class EspacioDto(

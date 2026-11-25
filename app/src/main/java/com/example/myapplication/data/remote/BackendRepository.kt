@@ -35,6 +35,27 @@ class BackendRepository(
     suspend fun login(email: String, password: String): ApiResult<LoginResponseDto> =
         llamar { api.login(LoginRequestDto(email = email, password = password)) }
 
+    /**
+     * Registro de personal vía backend. El rol SIEMPRE es SOLICITANTE;
+     * el único ADMIN es el superusuario del backend.
+     */
+    suspend fun registrar(
+        nombre: String,
+        email: String,
+        password: String,
+        perfil: String
+    ): ApiResult<LoginResponseDto> =
+        llamar {
+            api.registrar(
+                RegisterRequestDto(
+                    nombre = nombre,
+                    email = email,
+                    password = password,
+                    perfil = perfil
+                )
+            )
+        }
+
     // ---------- Espacios ----------
 
     suspend fun listarEspacios(): ApiResult<List<EspacioDto>> =

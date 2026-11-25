@@ -113,20 +113,20 @@ fun Login(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "• Admin: admin@colegio.edu / 123456",
+                    text = "• Admin: colegio.marcela.paz14@gmail.com / Marcelapaz1",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clickable {
-                        usuario = "admin@colegio.edu"
-                        password = "123456"
+                        usuario = "colegio.marcela.paz14@gmail.com"
+                        password = "Marcelapaz1"
                     }
                 )
                 Text(
-                    text = "• Profesor: profesor@colegio.edu / 123456",
+                    text = "• Profesor: docente@colegio.cl / 123456",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clickable {
-                        usuario = "profesor@colegio.edu"
+                        usuario = "docente@colegio.cl"
                         password = "123456"
                     }
                 )

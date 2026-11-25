@@ -1,6 +1,9 @@
 package com.example.myapplication.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -8,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.data.remote.ApiResult
 import com.example.myapplication.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 
@@ -19,12 +23,14 @@ fun Register(
     onBackToLogin: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var usuario by remember { mutableStateOf("") }
+    var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var rol by remember { mutableStateOf("profesor") }
+    var cargo by remember { mutableStateOf("DOCENTE") }
     var errorMensaje by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
+
+    val cargos = listOf("DOCENTE" to "Docente", "UTP" to "UTP", "PIE" to "PIE", "DIRECCION" to "Dirección", "INSPECTORIA" to "Inspectoría")
 
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -32,12 +38,18 @@ fun Register(
         verticalArrangement = Arrangement.Center
     ) {
         Text(text = "Crear Cuenta", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Registro de personal del colegio",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
-            value = usuario,
-            onValueChange = { usuario = it; errorMensaje = "" },
-            label = { Text("Nombre de Usuario") },
+            value = nombre,
+            onValueChange = { nombre = it; errorMensaje = "" },
+            label = { Text("Nombre completo") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -62,13 +74,38 @@ fun Register(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = rol == "profesor", onClick = { rol = "profesor" })
-            Text("Profesor")
-            Spacer(modifier = Modifier.width(16.dp))
-            RadioButton(selected = rol == "admin", onClick = { rol = "admin" })
-            Text("Administrador")
+        // Cargo (perfil) - SIEMPRE queda como SOLICITANTE, nunca ADMIN
+        ExposedDropdownMenuBox(
+            expanded = false,
+            onExpandedChange = {}
+        ) {
+            OutlinedTextField(
+                value = cargos.first { it.first == cargo }.second,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Cargo") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
+                modifier = Modifier.fillMaxWidth().menuAnchor()
+            )
+            ExposedDropdownMenu(
+                expanded = false,
+                onDismissRequest = {}
+            ) {
+                cargos.forEach { (codigo, etiqueta) ->
+                    DropdownMenuItem(
+                        text = { Text(etiqueta) },
+                        onClick = { cargo = codigo }
+                    )
+                }
+            }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "El acceso de administrador no se crea desde aquí. Solo el superusuario del sistema puede ser administrador.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
         if (errorMensaje.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -79,19 +116,23 @@ fun Register(
 
         Button(
             onClick = {
-                if (usuario.isBlank() || email.isBlank() || password.isBlank()) {
+                if (nombre.isBlank() || email.isBlank() || password.isBlank()) {
                     errorMensaje = "Todos los campos son obligatorios"
                 } else if (password.length < 4) {
                     errorMensaje = "La contraseña debe tener al menos 4 caracteres"
                 } else {
                     loading = true
+                    errorMensaje = ""
                     coroutineScope.launch {
-                        val success = viewModel.register(usuario, email, password, rol)
+                        val resultado = viewModel.register(nombre, email, password, cargo)
                         loading = false
-                        if (success) {
-                            onRegisterSuccess()
-                        } else {
-                            errorMensaje = "El correo ya está registrado"
+                        when (resultado) {
+                            is ApiResult.Ok -> {
+                                onRegisterSuccess()
+                            }
+                            is ApiResult.Error -> {
+                                errorMensaje = resultado.mensaje
+                            }
                         }
                     }
                 }

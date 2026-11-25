@@ -17,6 +17,9 @@ interface ApiService {
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequestDto): LoginResponseDto
 
+    @POST("api/auth/register")
+    suspend fun registrar(@Body request: RegisterRequestDto): LoginResponseDto
+
     // ---------- Espacios ----------
     @GET("api/espacios")
     suspend fun listarEspacios(): List<EspacioDto>
