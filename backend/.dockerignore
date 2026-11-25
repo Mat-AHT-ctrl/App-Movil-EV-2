@@ -1,0 +1,14 @@
+.git/
+.gitignore
+.gradle/
+build/
+out/
+bin/
+data/
+.idea/
+*.iml
+*.md
+README*
+HELP.md
+*.jks
+.env

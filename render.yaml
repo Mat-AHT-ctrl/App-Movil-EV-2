@@ -1,0 +1,33 @@
+# Blueprint de Render para el monorepo.
+# La app Android esta en /app y el backend en /backend.
+# Render solo construye el backend gracias a rootDir + buildFilter.
+services:
+  - type: web
+    name: marcela-paz-api
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+    # Evita que un commit de la app Android dispare un rebuild del backend
+    buildFilter:
+      paths:
+        - backend/**
+
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=75
+      # Se completan a mano en el panel de Render (vienen de Neon)
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false

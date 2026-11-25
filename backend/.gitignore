@@ -1,0 +1,26 @@
+# ===== Build =====
+.gradle/
+build/
+out/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ===== IDE =====
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# ===== Datos locales (H2) y logs de prueba =====
+data/
+run.log
+run.err
+
+# ===== Secretos =====
+*.env
+.env
+application-secret.properties
+*.jks
+*.p12
