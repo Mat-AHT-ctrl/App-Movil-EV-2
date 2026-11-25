@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
+import com.example.myapplication.repository.EspaciosRepository
 import com.example.myapplication.ui.screens.Admin
 import com.example.myapplication.ui.screens.Catalogo
 import com.example.myapplication.ui.screens.File
@@ -25,6 +27,7 @@ import com.example.myapplication.ui.screens.MisReservas
 import com.example.myapplication.ui.screens.Register
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.AppViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -86,6 +89,12 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                         label = { Text("Archivos") },
                         selected = viewModel.currentScreen == "files",
                         onClick = { viewModel.currentScreen = "files" }
+                    )
+                    NavigationBarItem(
+                        icon = { Text("🌐") },
+                        label = { Text("API") },
+                        selected = viewModel.currentScreen == "api",
+                        onClick = { viewModel.currentScreen = "api" }
                     )
                     NavigationBarItem(
                         icon = { Text("🚪") },
@@ -168,8 +177,39 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                         viewModel = viewModel,
                         onBack = { viewModel.currentScreen = "catalogo" }
                     )
+                    "api" -> PruebaConexionApi()
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PruebaConexionApi() {
+    val repository = remember { EspaciosRepository() }
+    val scope = rememberCoroutineScope()
+    var resultadoApi by remember { mutableStateOf("Presiona el botón para consultar el servicio externo") }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "Consulta de Servicio Externo / Spring Boot",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = {
+            resultadoApi = "Cargando..."
+            scope.launch {
+                val respuesta = repository.obtenerEspaciosJson("http://10.0.2.2:8080/api/espacios")
+                respuesta.onSuccess { json ->
+                    resultadoApi = "Conexión exitosa:\n$json"
+                }.onFailure { error ->
+                    resultadoApi = "Error de conexión: ${error.message}"
+                }
+            }
+        }) {
+            Text("Consultar API")
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = resultadoApi)
     }
 }

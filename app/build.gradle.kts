@@ -21,8 +21,9 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = false
             optimization {
-                enable = true
+                enable = false
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
