@@ -35,7 +35,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            MyApplicationTheme(
+                darkTheme = viewModel.darkTheme
+            ) {
                 MainAppNavigator(viewModel)
             }
         }

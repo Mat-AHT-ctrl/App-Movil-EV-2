@@ -1,6 +1,7 @@
 package com.example.myapplication.viewmodel
 
 import android.app.Application
+import android.content.SharedPreferences
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -43,6 +44,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var modoOffline by mutableStateOf(false)
         private set
 
+    /** Tema oscuro activado o desactivado. Se persiste en SharedPreferences. */
+    var darkTheme by mutableStateOf(false)
+        private set
+
+    private val prefs: SharedPreferences by lazy {
+        application.getSharedPreferences("app_colegio_prefs", android.content.Context.MODE_PRIVATE)
+    }
+
     private var _currentUser: Usuario? = null
     val currentUser: Usuario?
         get() = _currentUser
@@ -59,6 +68,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 e.printStackTrace()
             }
         }
+        // Cargar preferencia de tema guardada
+        darkTheme = prefs.getBoolean("dark_theme", false)
+    }
+
+    /** Cambia el tema claro/oscuro y lo persiste. */
+    fun cambiarTema(activado: Boolean) {
+        darkTheme = activado
+        prefs.edit().putBoolean("dark_theme", activado).apply()
     }
 
     /**

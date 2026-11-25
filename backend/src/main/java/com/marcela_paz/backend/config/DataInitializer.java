@@ -37,29 +37,32 @@ public class DataInitializer implements CommandLineRunner {
         cargarEspacios();
     }
 
+    /**
+     * Carga inicial del superusuario único.
+     *
+     * Solo se crea UN administrador: el correo y contraseña definidos abajo.
+     * El resto del personal se registra desde la app con rol SOLICITANTE;
+     * nadie puede autoasignarse ADMIN desde el registro.
+     *
+     * Es idempotente: si el admin ya existe con ese correo, no hace nada.
+     */
     private void cargarUsuarios() {
-        if (usuarioRepository.count() > 0) {
-            log.info("Usuarios ya existen ({}), se omite la carga inicial", usuarioRepository.count());
+        String emailAdmin = "colegio.marcela.paz14@gmail.com";
+
+        // Si ya existe el admin con el nuevo correo, no hace nada
+        if (usuarioRepository.findByEmail(emailAdmin).isPresent()) {
+            log.info("Superusuario ya existe ({}), se omite la carga inicial", emailAdmin);
             return;
         }
 
-        usuarioRepository.saveAll(List.of(
-            Usuario.builder()
-                .nombre("Inspectoria General")
-                .email("admin@colegio.cl")
-                .password("123456")
-                .rol(Usuario.Rol.ADMIN)
-                .perfil(Usuario.Perfil.INSPECTORIA)
-                .build(),
-            Usuario.builder()
-                .nombre("Profesor de Aula")
-                .email("docente@colegio.cl")
-                .password("123456")
-                .rol(Usuario.Rol.SOLICITANTE)
-                .perfil(Usuario.Perfil.DOCENTE)
-                .build()
-        ));
-        log.info("Carga inicial: 2 usuarios creados");
+        usuarioRepository.save(Usuario.builder()
+            .nombre("Inspectoria General")
+            .email(emailAdmin)
+            .password("Marcelapaz1")
+            .rol(Usuario.Rol.ADMIN)
+            .perfil(Usuario.Perfil.INSPECTORIA)
+            .build());
+        log.info("Carga inicial: superusuario {} creado", emailAdmin);
     }
 
     private void cargarEspacios() {
