@@ -3,7 +3,7 @@
 # Render solo construye el backend gracias a rootDir + buildFilter.
 services:
   - type: web
-    name: marcela-paz-api
+    name: app-movil-ev-2
     runtime: docker
     plan: free
     region: oregon

@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.viewmodel.AppViewModel
+import com.example.myapplication.viewmodel.LoginResult
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,12 +68,14 @@ fun Login(
                 } else {
                     loading = true
                     coroutineScope.launch {
-                        val success = viewModel.login(usuario, password)
+                        val resultado = viewModel.login(usuario, password)
                         loading = false
-                        if (success) {
-                            onLoginSuccess()
-                        } else {
-                            errorMensaje = "Correo o contraseña incorrectos"
+                        when (resultado) {
+                            is LoginResult.Ok -> onLoginSuccess()
+                            is LoginResult.CredencialesInvalidas ->
+                                errorMensaje = "Correo o contraseña incorrectos"
+                            is LoginResult.Error ->
+                                errorMensaje = resultado.mensaje
                         }
                     }
                 }

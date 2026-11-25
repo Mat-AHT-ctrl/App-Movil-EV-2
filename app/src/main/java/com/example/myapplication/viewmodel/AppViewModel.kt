@@ -8,11 +8,21 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.DatabaseProvider
+import com.example.myapplication.data.remote.ApiResult
+import com.example.myapplication.data.remote.BackendRepository
+import com.example.myapplication.data.remote.LoginResponseDto
 import com.example.myapplication.model.ArchivoItem
 import com.example.myapplication.model.Espacio
 import com.example.myapplication.model.Reserva
 import com.example.myapplication.model.Usuario
 import kotlinx.coroutines.launch
+
+/** Resultado del login, para que la UI muestre el mensaje correcto. */
+sealed interface LoginResult {
+    data object Ok : LoginResult
+    data object CredencialesInvalidas : LoginResult
+    data class Error(val mensaje: String) : LoginResult
+}
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -20,8 +30,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         DatabaseProvider.getDatabase(application)
     }
 
+    private val backend = BackendRepository()
+
     var currentScreen by mutableStateOf("login")
     var espacioSeleccionado: Espacio? by mutableStateOf(null)
+
+    /** Usuario tal como lo devuelve el backend (id UUID, rol y perfil reales). */
+    var usuarioRemoto: LoginResponseDto? by mutableStateOf(null)
+        private set
+
+    /** true cuando se entro sin conexion, usando la copia local de Room. */
+    var modoOffline by mutableStateOf(false)
+        private set
 
     private var _currentUser: Usuario? = null
     val currentUser: Usuario?
@@ -41,13 +61,59 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    suspend fun login(email: String, password: String): Boolean {
-        val usuario = database.usuarioDao().getByEmail(email)
-        if (usuario != null && usuario.password == password) {
-            _currentUser = usuario
-            return true
+    /**
+     * Login contra el backend Spring Boot.
+     *
+     * Si no hay red (o Render esta dormido), cae a la copia local de Room:
+     * la app sigue siendo usable sin conexion (offline-first).
+     * Si el backend responde "credenciales invalidas", NO se cae a local,
+     * para que el error sea el real.
+     */
+    suspend fun login(email: String, password: String): LoginResult {
+        val correo = email.trim()
+
+        return when (val respuesta = backend.login(correo, password)) {
+            is ApiResult.Ok -> {
+                val remoto = respuesta.data
+                usuarioRemoto = remoto
+                modoOffline = false
+
+                // Espejo local: el resto de la app sigue leyendo de Room
+                val rolLocal = if (remoto.rol == "ADMIN") "admin" else "profesor"
+                val existente = database.usuarioDao().getByEmail(remoto.email)
+                val local = if (existente == null) {
+                    val nuevo = Usuario(0, remoto.nombre, remoto.email, password, rolLocal)
+                    val id = database.usuarioDao().insert(nuevo)
+                    nuevo.copy(id = id.toInt())
+                } else {
+                    val actualizado = existente.copy(
+                        nombre = remoto.nombre,
+                        password = password,
+                        rol = rolLocal
+                    )
+                    database.usuarioDao().update(actualizado)
+                    actualizado
+                }
+                _currentUser = local
+                LoginResult.Ok
+            }
+
+            is ApiResult.Error -> {
+                if (respuesta.codigo == "CREDENCIALES_INVALIDAS") {
+                    LoginResult.CredencialesInvalidas
+                } else {
+                    val usuario = database.usuarioDao().getByEmail(correo)
+                    if (usuario != null && usuario.password == password) {
+                        _currentUser = usuario
+                        usuarioRemoto = null
+                        modoOffline = true
+                        LoginResult.Ok
+                    } else {
+                        LoginResult.Error(respuesta.mensaje)
+                    }
+                }
+            }
         }
-        return false
     }
 
     suspend fun register(nombre: String, email: String, password: String, rol: String): Boolean {
@@ -62,6 +128,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         _currentUser = null
+        usuarioRemoto = null
+        modoOffline = false
         currentScreen = "login"
         espacioSeleccionado = null
     }
@@ -143,12 +211,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun crearUsuariosPredeterminados() {
-        val existentes = database.usuarioDao().getAll()
-        if (existentes.isNotEmpty()) return
-
-        val admin = Usuario(0, "Inspector Administrador", "admin@colegio.edu", "123456", "admin")
-        val profesor = Usuario(0, "Profesor Juan Pérez", "profesor@colegio.edu", "123456", "profesor")
-        database.usuarioDao().insert(admin)
-        database.usuarioDao().insert(profesor)
+        // Se revisan una por una: si la app ya tenia las cuentas .edu,
+        // igual se agregan las .cl que existen en el backend.
+        val cuentas = listOf(
+            Usuario(0, "Inspectoría General", "admin@colegio.cl", "123456", "admin"),
+            Usuario(0, "Profesor de Aula", "docente@colegio.cl", "123456", "profesor"),
+            Usuario(0, "Inspector Administrador", "admin@colegio.edu", "123456", "admin"),
+            Usuario(0, "Profesor Juan Pérez", "profesor@colegio.edu", "123456", "profesor")
+        )
+        for (cuenta in cuentas) {
+            if (database.usuarioDao().getByEmail(cuenta.email) == null) {
+                database.usuarioDao().insert(cuenta)
+            }
+        }
     }
 }

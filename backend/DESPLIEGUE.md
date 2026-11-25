@@ -112,10 +112,10 @@ git push
 
 ## 4. Verificar
 
-Tu URL queda como `https://marcela-paz-api.onrender.com`.
+Tu URL queda como `https://app-movil-ev-2.onrender.com`.
 
 ```powershell
-curl https://marcela-paz-api.onrender.com/api/health
+curl https://app-movil-ev-2.onrender.com/api/health
 ```
 
 Debe responder:
@@ -130,11 +130,11 @@ y que no tenga `-pooler` en el host.
 Prueba también el seed:
 
 ```powershell
-curl https://marcela-paz-api.onrender.com/api/espacios
-curl https://marcela-paz-api.onrender.com/api/auth/login -Method Post -ContentType "application/json" -Body '{"email":"docente@colegio.cl","password":"123456"}'
+curl https://app-movil-ev-2.onrender.com/api/espacios
+curl https://app-movil-ev-2.onrender.com/api/auth/login -Method Post -ContentType "application/json" -Body '{"email":"docente@colegio.cl","password":"123456"}'
 ```
 
-Swagger: `https://marcela-paz-api.onrender.com/swagger-ui.html`
+Swagger: `https://app-movil-ev-2.onrender.com/swagger-ui.html`
 
 ---
 
@@ -143,7 +143,7 @@ Swagger: `https://marcela-paz-api.onrender.com/swagger-ui.html`
 En `App-Movil-EV-2`, el `BASE_URL` de Retrofit debe quedar con la URL de Render:
 
 ```kotlin
-private const val BASE_URL = "https://marcela-paz-api.onrender.com/"
+private const val BASE_URL = "https://app-movil-ev-2.onrender.com/"
 ```
 
 **Siempre con `/` al final** (Retrofit lo exige) y **https**, no http.
@@ -158,7 +158,7 @@ La primera petición después de eso tarda **30–60 segundos**.
 Antes de entrar a defender, abre en el navegador:
 
 ```
-https://marcela-paz-api.onrender.com/api/health
+https://app-movil-ev-2.onrender.com/api/health
 ```
 
 Cuando responda `"estado":"ok"`, ya está despierto. Hazlo unos 10 minutos antes
