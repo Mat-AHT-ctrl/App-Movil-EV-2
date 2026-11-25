@@ -13,6 +13,8 @@ import com.example.myapplication.data.remote.ApiResult
 import com.example.myapplication.data.remote.BackendRepository
 import com.example.myapplication.data.remote.EspacioDto
 import com.example.myapplication.data.remote.LoginResponseDto
+import com.example.myapplication.data.remote.ReservaDto
+import com.example.myapplication.data.remote.ReservaRequestDto
 import com.example.myapplication.data.remote.toEspacio
 import com.example.myapplication.model.ArchivoItem
 import com.example.myapplication.model.Espacio
@@ -237,6 +239,40 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             ApiResult.Error("ERROR_DESCONOCIDO", e.message ?: "Error al cargar espacios")
         }
+
+    /**
+     * Crea una reserva en el backend (Render + Neon).
+     */
+    suspend fun crearReservaBackend(
+        espacioId: String,
+        espacioNombre: String,
+        usuarioId: String,
+        solicitanteNombre: String,
+        perfilSolicitante: String,
+        fecha: String,
+        horaInicio: String,
+        horaTermino: String,
+        actividad: String,
+        cursoGrupo: String,
+        asistentes: Int,
+        observaciones: String? = null
+    ): ApiResult<ReservaDto> =
+        backend.crearReserva(
+            com.example.myapplication.data.remote.ReservaRequestDto(
+                espacioId = espacioId,
+                espacioNombre = espacioNombre,
+                usuarioId = usuarioId,
+                solicitanteNombre = solicitanteNombre,
+                perfilSolicitante = perfilSolicitante,
+                fecha = fecha,
+                horaInicio = horaInicio,
+                horaTermino = horaTermino,
+                actividad = actividad,
+                cursoGrupo = cursoGrupo,
+                asistentes = asistentes,
+                observaciones = observaciones
+            )
+        )
 
     /**
      * Devuelve los tipos de espacio únicos disponibles para los filtros del catálogo.

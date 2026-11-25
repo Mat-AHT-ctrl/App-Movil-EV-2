@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.ui.screens.Admin
 import com.example.myapplication.ui.screens.Catalogo
+import com.example.myapplication.ui.screens.DetalleEspacioScreen
 import com.example.myapplication.ui.screens.File
 import com.example.myapplication.ui.screens.Formulario
 import com.example.myapplication.ui.screens.Login
@@ -129,18 +130,17 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                         viewModel = viewModel,
                         onEspacioSelected = { espacio ->
                             viewModel.espacioSeleccionado = espacio
-                            viewModel.currentScreen = "formulario"
+                            viewModel.currentScreen = "detalleEspacio"
                         },
                         onNavigateToAdmin = { viewModel.currentScreen = "admin" },
                         onNavigateToMisReservas = { viewModel.currentScreen = "misReservas" }
                     )
-                    "formulario" -> if (viewModel.espacioSeleccionado != null) {
-                        Formulario(
+                    "detalleEspacio" -> if (viewModel.espacioSeleccionado != null) {
+                        DetalleEspacioScreen(
                             espacio = viewModel.espacioSeleccionado!!,
                             viewModel = viewModel,
-                            onEnviarSolicitud = {
-                                viewModel.currentScreen = "catalogo"
-                                viewModel.espacioSeleccionado = null
+                            onSolicitar = {
+                                viewModel.currentScreen = "formulario"
                             },
                             onVolver = {
                                 viewModel.currentScreen = "catalogo"
@@ -152,7 +152,30 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                             viewModel = viewModel,
                             onEspacioSelected = { espacio ->
                                 viewModel.espacioSeleccionado = espacio
-                                viewModel.currentScreen = "formulario"
+                                viewModel.currentScreen = "detalleEspacio"
+                            },
+                            onNavigateToAdmin = { viewModel.currentScreen = "admin" },
+                            onNavigateToMisReservas = { viewModel.currentScreen = "misReservas" }
+                        )
+                    }
+                    "formulario" -> if (viewModel.espacioSeleccionado != null) {
+                        Formulario(
+                            espacio = viewModel.espacioSeleccionado!!,
+                            viewModel = viewModel,
+                            onEnviarSolicitud = {
+                                viewModel.currentScreen = "catalogo"
+                                viewModel.espacioSeleccionado = null
+                            },
+                            onVolver = {
+                                viewModel.currentScreen = "detalleEspacio"
+                            }
+                        )
+                    } else {
+                        Catalogo(
+                            viewModel = viewModel,
+                            onEspacioSelected = { espacio ->
+                                viewModel.espacioSeleccionado = espacio
+                                viewModel.currentScreen = "detalleEspacio"
                             },
                             onNavigateToAdmin = { viewModel.currentScreen = "admin" },
                             onNavigateToMisReservas = { viewModel.currentScreen = "misReservas" }
