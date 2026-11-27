@@ -1,2 +1,0 @@
-Alias: marcela_paz
-Keystore y Key: 123456
