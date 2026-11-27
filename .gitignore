@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+/docs/
+/app/keystore/
+.vscode/
+hs_err_pid*.log
+replay_pid*.log

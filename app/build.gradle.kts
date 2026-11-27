@@ -1,9 +1,22 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.kapt)
 }
+
+/**
+ * Firma release: credenciales y ruta del keystore en local.properties
+ * (ignorado por Git). Un clone sin keystore sigue compilando en debug.
+ */
+val keystoreProps = Properties().apply {
+    val archivo = rootProject.file("local.properties")
+    if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+val releaseStoreFile = keystoreProps.getProperty("release.keystore.file")?.let { rootProject.file(it) }
+val hayFirmaRelease = releaseStoreFile != null && releaseStoreFile!!.exists()
 
 // URL del backend. Por defecto apunta a Render (produccion).
 // Para usar el backend local:
@@ -32,12 +45,24 @@ android {
         buildConfigField("String", "BASE_URL", "\"$backendUrl\"")
     }
 
+    signingConfigs {
+        create("release") {
+            releaseStoreFile?.let { archivo ->
+                storeFile = archivo
+                storePassword = keystoreProps.getProperty("release.keystore.password")
+                keyAlias = keystoreProps.getProperty("release.key.alias")
+                keyPassword = keystoreProps.getProperty("release.key.password")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+            if (hayFirmaRelease) {
+                signingConfig = signingConfigs.getByName("release")
             }
+            // R8 con packageScope rompia Kotlin en runtime (IllegalAccessError
+            // en MainActivity.onCreate). El EFT pide firmado, no minificado.
         }
     }
     compileOptions {
