@@ -6,7 +6,10 @@ import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,7 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -36,36 +41,59 @@ fun VisorArchivo(
 ) {
     val context = LocalContext.current
     val uri = remember(archivo) { archivo.uri?.let { Uri.parse(it) } }
-    var pagina by remember { mutableIntStateOf(0) }
-    var totalPaginas by remember { mutableIntStateOf(0) }
     var texto by remember { mutableStateOf("") }
+    var paginas by remember { mutableStateOf(emptyList<Bitmap>()) }
+    var resetZoom by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(uri, archivo.id) {
         if (uri == null) return@LaunchedEffect
-        if (archivo.tipo == "PDF") {
-            try {
-                context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-                    val renderer = PdfRenderer(pfd)
-                    try {
-                        totalPaginas = renderer.pageCount
-                    } finally {
-                        renderer.close()
+        when (archivo.tipo) {
+            "PDF" -> {
+                val lista = mutableListOf<Bitmap>()
+                try {
+                    context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                        val renderer = PdfRenderer(pfd)
+                        try {
+                            for (i in 0 until renderer.pageCount) {
+                                val page = renderer.openPage(i)
+                                try {
+                                    val escala = (1080f / page.width.coerceAtLeast(1)).coerceAtMost(2f)
+                                    val ancho = (page.width * escala).toInt().coerceAtLeast(1)
+                                    val alto = (page.height * escala).toInt().coerceAtLeast(1)
+                                    val bmp = Bitmap.createBitmap(ancho, alto, Bitmap.Config.ARGB_8888)
+                                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                    lista.add(bmp)
+                                } finally {
+                                    page.close()
+                                }
+                            }
+                        } finally {
+                            renderer.close()
+                        }
                     }
+                } catch (_: Exception) {
+                    // Si falla, se muestra el aviso dentro del dialogo.
                 }
-            } catch (_: Exception) {
-                totalPaginas = 0
+                paginas = lista
             }
-        } else if (esTexto(archivo.nombre)) {
-            try {
-                texto = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
-            } catch (_: Exception) {
-                texto = ""
+            else -> if (esTexto(archivo.nombre)) {
+                try {
+                    texto = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
+                } catch (_: Exception) {
+                    texto = ""
+                }
             }
         }
     }
 
-    val bitmap = remember(archivo.id, pagina, uri) {
-        cargarBitmap(context, uri, archivo, pagina)
+    val bitmapImagen = remember(archivo.id, uri) {
+        if (archivo.tipo == "IMAGEN" && uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+            } catch (_: Exception) {
+                null
+            }
+        } else null
     }
 
     Dialog(
@@ -73,7 +101,7 @@ fun VisorArchivo(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().navigationBarsPadding(),
             color = MaterialTheme.colorScheme.background
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -87,6 +115,9 @@ fun VisorArchivo(
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
+                    if (archivo.tipo == "IMAGEN") {
+                        TextButton(onClick = { resetZoom++ }) { Text("Ajustar") }
+                    }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Cerrar visor")
                     }
@@ -99,27 +130,36 @@ fun VisorArchivo(
                     when {
                         uri == null -> Text("Este archivo no tiene una copia local.", textAlign = TextAlign.Center)
                         archivo.tipo == "IMAGEN" -> {
-                            if (bitmap != null) {
-                                Image(
-                                    bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = archivo.nombre,
-                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                    contentScale = ContentScale.Fit
-                                )
+                            if (bitmapImagen != null) {
+                                ZoomableImage(bitmapImagen, archivo.nombre, resetZoom)
                             } else {
                                 Text("No se pudo cargar la imagen.")
                             }
                         }
                         archivo.tipo == "PDF" -> {
-                            if (bitmap != null) {
-                                Image(
-                                    bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = "Página ${pagina + 1}",
-                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                            } else {
+                            if (paginas.isEmpty()) {
                                 Text("No se pudo renderizar este PDF en la app.", textAlign = TextAlign.Center)
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    items(paginas.size) { i ->
+                                        Image(
+                                            bitmap = paginas[i].asImageBitmap(),
+                                            contentDescription = "Página ${i + 1}",
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentScale = ContentScale.FillWidth
+                                        )
+                                        Text(
+                                            "Página ${i + 1} de ${paginas.size}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                         esTexto(archivo.nombre) -> Text(
@@ -143,64 +183,40 @@ fun VisorArchivo(
                         }
                     }
                 }
-
-                if (archivo.tipo == "PDF" && totalPaginas > 1) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = { pagina = (pagina - 1).coerceAtLeast(0) },
-                            enabled = pagina > 0
-                        ) { Text("Anterior") }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text("${pagina + 1} / $totalPaginas")
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Button(
-                            onClick = { pagina = (pagina + 1).coerceAtMost(totalPaginas - 1) },
-                            enabled = pagina < totalPaginas - 1
-                        ) { Text("Siguiente") }
-                    }
-                }
             }
         }
     }
+}
+
+/** Imagen con zoom por pellizco y botón "Ajustar" que vuelve a 1:1. */
+@Composable
+private fun ZoomableImage(bitmap: Bitmap, description: String, resetKey: Int = 0) {
+    var escala by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    LaunchedEffect(bitmap, resetKey) {
+        escala = 1f
+        offset = Offset.Zero
+    }
+    val estadoZoom = rememberTransformableState { factorZoom, desplazamiento, _ ->
+        escala = (escala * factorZoom).coerceIn(1f, 6f)
+        offset = offset + desplazamiento
+        if (escala == 1f) offset = Offset.Zero
+    }
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = description,
+        modifier = Modifier
+            .fillMaxSize()
+            .transformable(estadoZoom)
+            .graphicsLayer(
+                scaleX = escala,
+                scaleY = escala,
+                translationX = offset.x,
+                translationY = offset.y
+            ),
+        contentScale = ContentScale.Fit
+    )
 }
 
 private fun esTexto(nombre: String): Boolean =
     nombre.substringAfterLast('.', "").lowercase() in setOf("txt", "csv", "md", "json", "xml", "log")
-
-private fun cargarBitmap(context: Context, uri: Uri?, archivo: ArchivoItem, pagina: Int): Bitmap? {
-    uri ?: return null
-    return try {
-        when (archivo.tipo) {
-            "IMAGEN" -> context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-            "PDF" -> context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-                val renderer = PdfRenderer(pfd)
-                try {
-                    if (renderer.pageCount == 0) {
-                        null
-                    } else {
-                        val page = renderer.openPage(pagina.coerceIn(0, renderer.pageCount - 1))
-                        try {
-                            val escala = (1080f / page.width.coerceAtLeast(1)).coerceAtMost(2f)
-                            val ancho = (page.width * escala).toInt().coerceAtLeast(1)
-                            val alto = (page.height * escala).toInt().coerceAtLeast(1)
-                            val bmp = Bitmap.createBitmap(ancho, alto, Bitmap.Config.ARGB_8888)
-                            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                            bmp
-                        } finally {
-                            page.close()
-                        }
-                    }
-                } finally {
-                    renderer.close()
-                }
-            }
-            else -> null
-        }
-    } catch (_: Exception) {
-        null
-    }
-}
