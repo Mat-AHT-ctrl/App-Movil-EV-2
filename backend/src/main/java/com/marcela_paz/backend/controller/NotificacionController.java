@@ -34,4 +34,10 @@ public class NotificacionController {
         notificacionRepository.marcarComoLeida(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/usuario/{usuarioId}/leer-todas")
+    public ResponseEntity<Void> marcarTodasComoLeidas(@PathVariable String usuarioId) {
+        notificacionRepository.marcarTodasComoLeidas(usuarioId);
+        return ResponseEntity.noContent().build();
+    }
 }

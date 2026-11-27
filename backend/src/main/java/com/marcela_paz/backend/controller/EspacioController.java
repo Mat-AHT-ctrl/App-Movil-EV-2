@@ -3,6 +3,7 @@ package com.marcela_paz.backend.controller;
 import com.marcela_paz.backend.dto.EstadoEspacioRequest;
 import com.marcela_paz.backend.model.Espacio;
 import com.marcela_paz.backend.repository.EspacioRepository;
+import com.marcela_paz.backend.service.NotificacionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +15,9 @@ public class EspacioController {
 
     @Autowired
     private EspacioRepository espacioRepository;
+
+    @Autowired
+    private NotificacionService notificacionService;
 
     @GetMapping
     public List<Espacio> listar() {
@@ -35,6 +39,13 @@ public class EspacioController {
         } catch (Exception ex) {
             throw new IllegalArgumentException("ESTADO_NO_VALIDO");
         }
-        return espacioRepository.save(espacio);
+        Espacio guardado = espacioRepository.save(espacio);
+        notificacionService.notificarDocentesDeEspacio(
+            id,
+            "Estado de espacio actualizado",
+            "El espacio " + espacio.getNombre() + " ahora está " + guardado.getEstado() + ".",
+            "SISTEMA"
+        );
+        return guardado;
     }
 }

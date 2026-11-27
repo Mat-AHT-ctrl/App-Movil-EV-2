@@ -81,6 +81,9 @@ interface ApiService {
     @PATCH("api/notificaciones/{id}/leida")
     suspend fun marcarLeida(@Path("id") id: String)
 
+    @PATCH("api/notificaciones/usuario/{usuarioId}/leer-todas")
+    suspend fun marcarTodasLeidas(@Path("usuarioId") usuarioId: String)
+
     // ---------- Salud ----------
     @GET("api/health")
     suspend fun health(): Map<String, Any>

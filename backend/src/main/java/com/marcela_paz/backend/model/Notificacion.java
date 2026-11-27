@@ -1,5 +1,6 @@
 package com.marcela_paz.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -36,6 +37,7 @@ public class Notificacion {
     private Tipo tipo;
 
     @Column(name = "fecha_envio")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime fechaEnvio;
 
     @Column(nullable = false)

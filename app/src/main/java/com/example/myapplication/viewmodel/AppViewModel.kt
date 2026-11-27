@@ -26,6 +26,7 @@ import com.example.myapplication.model.ArchivoItem
 import com.example.myapplication.model.Espacio
 import com.example.myapplication.model.Reserva
 import com.example.myapplication.model.Usuario
+import com.example.myapplication.utils.NotificationHelper
 import kotlinx.coroutines.launch
 
 /** Resultado del login, para que la UI muestre el mensaje correcto. */
@@ -84,6 +85,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var conteoNoLeidas by mutableStateOf(0L)
         private set
 
+    private var idsNotificacionesConocidos: Set<String> = emptySet()
+    private var notificacionesInicializadas = false
+
     /** true cuando se entro sin conexion, usando la copia local de Room. */
     var modoOffline by mutableStateOf(false)
         private set
@@ -119,6 +123,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         cargarSesion()
     }
 
+    /** Marca todas las notificaciones del usuario como leídas. */
+    fun marcarTodasComoLeidas() {
+        viewModelScope.launch {
+            val usuarioId = usuarioRemoto?.id ?: return@launch
+            when (backend.marcarTodasLeidas(usuarioId)) {
+                is ApiResult.Ok -> {
+                    notificaciones = notificaciones.map { it.copy(leida = true) }
+                    conteoNoLeidas = 0L
+                }
+                is ApiResult.Error -> Unit
+            }
+        }
+    }
+
     /** Cambia el tema claro/oscuro y lo persiste. */
     fun cambiarTema(activado: Boolean) {
         darkTheme = activado
@@ -139,7 +157,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun cargarNotificaciones() {
         val usuarioId = usuarioRemoto?.id ?: return
         when (val resultado = backend.listarNotificaciones(usuarioId)) {
-            is ApiResult.Ok -> notificaciones = resultado.data
+            is ApiResult.Ok -> {
+                val datos = resultado.data
+                val nuevas = if (notificacionesInicializadas) {
+                    datos.filter { !it.leida && it.id !in idsNotificacionesConocidos }
+                } else {
+                    emptyList()
+                }
+                notificaciones = datos
+                idsNotificacionesConocidos = datos.map { it.id }.toSet()
+                notificacionesInicializadas = true
+                nuevas.forEach { NotificationHelper.mostrar(getApplication(), it) }
+            }
             is ApiResult.Error -> Unit
         }
         when (val resultado = backend.contarNoLeidas(usuarioId)) {
@@ -366,6 +395,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         modoOffline = false
         notificaciones = emptyList()
         conteoNoLeidas = 0L
+        idsNotificacionesConocidos = emptySet()
+        notificacionesInicializadas = false
         currentScreen = "login"
         espacioSeleccionado = null
     }

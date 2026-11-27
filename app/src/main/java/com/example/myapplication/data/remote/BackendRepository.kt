@@ -134,6 +134,9 @@ class BackendRepository(
 
     suspend fun marcarLeida(id: String): ApiResult<Unit> = llamar { api.marcarLeida(id) }
 
+    suspend fun marcarTodasLeidas(usuarioId: String): ApiResult<Unit> =
+        llamar { api.marcarTodasLeidas(usuarioId) }
+
     // ---------- API externa: feriados de Chile ----------
 
     suspend fun listarFeriados(anio: Int): ApiResult<List<FeriadoDto>> =

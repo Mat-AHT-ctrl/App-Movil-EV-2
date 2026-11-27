@@ -1,18 +1,30 @@
 package com.example.myapplication.ui.screens
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.R
 import com.example.myapplication.data.remote.ApiResult
 import com.example.myapplication.viewmodel.AppViewModel
 import com.example.myapplication.viewmodel.LoginResult
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Login(
     viewModel: AppViewModel,
@@ -20,6 +32,11 @@ fun Login(
     onNavigateToRegister: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val isImeVisible = WindowInsets.isImeVisible
+    val logoSize by animateDpAsState(
+        targetValue = if (isImeVisible) 88.dp else 148.dp,
+        label = "logoSize"
+    )
     var usuario by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMensaje by remember { mutableStateOf("") }
@@ -45,10 +62,31 @@ fun Login(
     var cambioLoading by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Surface(
+            modifier = Modifier.size(logoSize),
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White,
+            shadowElevation = 6.dp
+        ) {
+            Image(
+                bitmap = ImageBitmap.imageResource(R.drawable.logo_colegio),
+                contentDescription = "Escudo Escuela Marcela Paz",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp),
+                contentScale = ContentScale.Fit,
+                filterQuality = FilterQuality.High
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = "Escuela Marcela Paz",
             style = MaterialTheme.typography.headlineLarge,
@@ -166,6 +204,11 @@ fun Login(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (pasoReset == 1) {
+                        Text(
+                            text = "Ingresa tu correo institucional para generar un código temporal de verificación.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         OutlinedTextField(
                             value = resetEmail,
                             onValueChange = { resetEmail = it; resetError = "" },
@@ -173,18 +216,6 @@ fun Login(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        if (codigoDemo.isNotBlank()) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    text = "Código de verificación (demo): $codigoDemo",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(12.dp)
-                                )
-                            }
-                        }
                         if (resetError.isNotEmpty()) {
                             Text(text = resetError, color = MaterialTheme.colorScheme.error)
                         }
@@ -219,10 +250,50 @@ fun Login(
                             }
                         }
                     } else {
+                        Text(
+                            text = "Ingresa el código enviado para $resetEmail y define tu nueva contraseña.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (codigoDemo.isNotBlank()) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Código generado (Servidor):",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = codigoDemo,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    TextButton(onClick = {
+                                        resetCodigo = codigoDemo
+                                        resetError = ""
+                                    }) {
+                                        Text("Autocompletar")
+                                    }
+                                }
+                            }
+                        }
                         OutlinedTextField(
                             value = resetCodigo,
                             onValueChange = { resetCodigo = it; resetError = "" },
                             label = { Text("Código de 6 dígitos") },
+                            placeholder = { Text("Ej.: 482915") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -230,6 +301,7 @@ fun Login(
                             value = resetNueva,
                             onValueChange = { resetNueva = it; resetError = "" },
                             label = { Text("Nueva contraseña (mín. 6)") },
+                            placeholder = { Text("Nueva clave") },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
@@ -238,6 +310,7 @@ fun Login(
                             value = resetConfirmar,
                             onValueChange = { resetConfirmar = it; resetError = "" },
                             label = { Text("Confirmar contraseña") },
+                            placeholder = { Text("Repite la nueva clave") },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
@@ -282,7 +355,7 @@ fun Login(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { mostrarReset = false }) { Text("Cerrar") }
+                TextButton(onClick = { mostrarReset = false }) { Text("Cancelar") }
             }
         )
     }
@@ -371,7 +444,7 @@ fun Login(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { mostrarCambio = false }) { Text("Cerrar") }
+                TextButton(onClick = { mostrarCambio = false }) { Text("Cancelar") }
             }
         )
     }

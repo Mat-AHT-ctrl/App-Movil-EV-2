@@ -1,9 +1,14 @@
 package com.example.myapplication
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -23,6 +28,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
@@ -37,7 +43,9 @@ import com.example.myapplication.ui.screens.Profile
 import com.example.myapplication.ui.screens.Register
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.AppViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -60,12 +68,41 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppNavigator(viewModel: AppViewModel) {
+    val context = LocalContext.current
     val mostrarBarras = viewModel.currentScreen != "login" && viewModel.currentScreen != "register"
     var mostrarNotificaciones by remember { mutableStateOf(false) }
+    var permisoNotificacionesSolicitado by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+
+    val permisoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* El usuario decide; la app sigue funcionando igual. */ }
 
     LaunchedEffect(viewModel.currentScreen) {
         viewModel.cargarNotificaciones()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !permisoNotificacionesSolicitado &&
+            viewModel.currentScreen !in listOf("login", "register")
+        ) {
+            permisoNotificacionesSolicitado = true
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permisoLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    // Sondeo periódico mientras haya sesión activa (aprox. "tiempo real").
+    LaunchedEffect(viewModel.usuarioRemoto?.id) {
+        if (viewModel.usuarioRemoto != null) {
+            while (true) {
+                delay(25_000L)
+                viewModel.cargarNotificaciones()
+            }
+        }
     }
 
     BackHandler(enabled = viewModel.currentScreen !in listOf("login", "catalogo")) {
@@ -91,7 +128,12 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                             BadgedBox(
                                 badge = {
                                     if (viewModel.conteoNoLeidas > 0L) {
-                                        Badge { Text(viewModel.conteoNoLeidas.toString()) }
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                            contentColor = MaterialTheme.colorScheme.onError
+                                        ) {
+                                            Text(viewModel.conteoNoLeidas.toString())
+                                        }
                                     }
                                 }
                             ) {
@@ -316,10 +358,15 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    coroutineScope.launch { viewModel.cargarNotificaciones() }
-                }) {
-                    Text("Actualizar")
+                Row {
+                    TextButton(onClick = { viewModel.marcarTodasComoLeidas() }) {
+                        Text("Marcar todas como leídas")
+                    }
+                    TextButton(onClick = {
+                        coroutineScope.launch { viewModel.cargarNotificaciones() }
+                    }) {
+                        Text("Actualizar")
+                    }
                 }
             }
         )

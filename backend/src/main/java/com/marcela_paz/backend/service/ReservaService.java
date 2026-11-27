@@ -4,6 +4,7 @@ import com.marcela_paz.backend.model.Reserva;
 import com.marcela_paz.backend.repository.ReservaRepository;
 import com.marcela_paz.backend.repository.BloqueoRepository;
 import com.marcela_paz.backend.repository.EspacioRepository;
+import com.marcela_paz.backend.service.NotificacionService;
 import com.marcela_paz.backend.model.Espacio;
 import com.marcela_paz.backend.model.Bloqueo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,9 @@ public class ReservaService {
 
     @Autowired
     private EspacioRepository espacioRepository;
+
+    @Autowired
+    private NotificacionService notificacionService;
 
     private static final DateTimeFormatter HORA_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -87,7 +91,17 @@ public class ReservaService {
         reserva.setEstado(Reserva.EstadoEstado.PENDIENTE);
         reserva.setFechaCreacion(LocalDateTime.now(ZONA_COLEGIO));
         reserva.setSyncEstado(Reserva.SyncEstado.SINCRONIZADO);
-        return reservaRepository.save(reserva);
+        Reserva creada = reservaRepository.save(reserva);
+
+        notificacionService.notificarAdmins(
+            "Nueva solicitud de reserva",
+            reserva.getSolicitanteNombre() + " solicitó " + reserva.getEspacioNombre() +
+                " el " + reserva.getFecha() + " (" + reserva.getHoraInicio() + " - " +
+                reserva.getHoraTermino() + ").",
+            "SISTEMA",
+            creada.getId()
+        );
+        return creada;
     }
 
     public Reserva aprobarReserva(String id, String resueltoPor) {
@@ -99,7 +113,17 @@ public class ReservaService {
         reserva.setEstado(Reserva.EstadoEstado.APROBADA);
         reserva.setResueltoPor(resueltoPor);
         reserva.setFechaResolucion(LocalDateTime.now(ZONA_COLEGIO));
-        return reservaRepository.save(reserva);
+        Reserva guardada = reservaRepository.save(reserva);
+
+        notificacionService.crearNotificacion(
+            reserva.getUsuarioId(),
+            "Reserva aprobada",
+            "Tu reserva en " + reserva.getEspacioNombre() + " para el " + reserva.getFecha() +
+                " (" + reserva.getHoraInicio() + " - " + reserva.getHoraTermino() + ") fue aprobada.",
+            "APROBADA",
+            guardada.getId()
+        );
+        return guardada;
     }
 
     public Reserva rechazarReserva(String id, String justificacion, String resueltoPor) {
@@ -115,7 +139,17 @@ public class ReservaService {
         reserva.setJustificacionRechazo(justificacion);
         reserva.setResueltoPor(resueltoPor);
         reserva.setFechaResolucion(LocalDateTime.now(ZONA_COLEGIO));
-        return reservaRepository.save(reserva);
+        Reserva guardada = reservaRepository.save(reserva);
+
+        notificacionService.crearNotificacion(
+            reserva.getUsuarioId(),
+            "Reserva rechazada",
+            "Tu reserva en " + reserva.getEspacioNombre() + " para el " + reserva.getFecha() +
+                " fue rechazada. Motivo: " + justificacion,
+            "RECHAZADA",
+            guardada.getId()
+        );
+        return guardada;
     }
 
     public Reserva cancelarReserva(String id, String justificacion) {
@@ -127,7 +161,20 @@ public class ReservaService {
         reserva.setEstado(Reserva.EstadoEstado.CANCELADA);
         reserva.setJustificacionCancelacion(justificacion);
         reserva.setFechaResolucion(LocalDateTime.now(ZONA_COLEGIO));
-        return reservaRepository.save(reserva);
+        Reserva guardada = reservaRepository.save(reserva);
+
+        String motivo = (justificacion == null || justificacion.isBlank())
+            ? "Cancelada por el solicitante."
+            : "Motivo: " + justificacion;
+        notificacionService.crearNotificacion(
+            reserva.getUsuarioId(),
+            "Reserva cancelada",
+            "Tu reserva en " + reserva.getEspacioNombre() + " para el " + reserva.getFecha() +
+                " fue cancelada. " + motivo,
+            "CANCELADA",
+            guardada.getId()
+        );
+        return guardada;
     }
 
     public List<Reserva> listarPendientes() {
