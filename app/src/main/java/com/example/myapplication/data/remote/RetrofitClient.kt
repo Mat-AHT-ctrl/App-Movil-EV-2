@@ -49,4 +49,14 @@ object RetrofitClient {
             .build()
             .create(ApiService::class.java)
     }
+
+    /** Segundo cliente: API externa de feriados (dominio distinto al backend). */
+    val feriadosApi: FeriadosApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://date.nager.at/")
+            .client(httpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(FeriadosApiService::class.java)
+    }
 }

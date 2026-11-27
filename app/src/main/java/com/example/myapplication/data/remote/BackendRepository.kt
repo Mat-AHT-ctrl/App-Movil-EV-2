@@ -112,6 +112,11 @@ class BackendRepository(
 
     suspend fun marcarLeida(id: String): ApiResult<Unit> = llamar { api.marcarLeida(id) }
 
+    // ---------- API externa: feriados de Chile ----------
+
+    suspend fun listarFeriados(anio: Int): ApiResult<List<FeriadoDto>> =
+        llamar { RetrofitClient.feriadosApi.obtenerFeriadosChile(anio) }
+
     // ---------- Salud ----------
 
     suspend fun health(): ApiResult<Map<String, Any>> = llamar { api.health() }

@@ -139,7 +139,10 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                         DetalleEspacioScreen(
                             espacio = viewModel.espacioSeleccionado!!,
                             viewModel = viewModel,
-                            onSolicitar = {
+                            onSolicitar = { fecha, horaInicio, horaTermino ->
+                                viewModel.reservaFecha = fecha
+                                viewModel.reservaHoraInicio = horaInicio
+                                viewModel.reservaHoraTermino = horaTermino
                                 viewModel.currentScreen = "formulario"
                             },
                             onVolver = {

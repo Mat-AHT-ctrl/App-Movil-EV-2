@@ -10,7 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +31,9 @@ public class ReservaService {
     private EspacioRepository espacioRepository;
 
     private static final DateTimeFormatter HORA_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /** Render corre en UTC; las reglas del colegio usan hora de Chile. */
+    private static final ZoneId ZONA_COLEGIO = ZoneId.of("America/Santiago");
 
     public Reserva crearReserva(Reserva reserva) {
         // R14: obtener el espacio
@@ -80,7 +85,7 @@ public class ReservaService {
         }
 
         reserva.setEstado(Reserva.EstadoEstado.PENDIENTE);
-        reserva.setFechaCreacion(java.time.LocalDateTime.now());
+        reserva.setFechaCreacion(LocalDateTime.now(ZONA_COLEGIO));
         reserva.setSyncEstado(Reserva.SyncEstado.SINCRONIZADO);
         return reservaRepository.save(reserva);
     }
@@ -93,7 +98,7 @@ public class ReservaService {
         }
         reserva.setEstado(Reserva.EstadoEstado.APROBADA);
         reserva.setResueltoPor(resueltoPor);
-        reserva.setFechaResolucion(java.time.LocalDateTime.now());
+        reserva.setFechaResolucion(LocalDateTime.now(ZONA_COLEGIO));
         return reservaRepository.save(reserva);
     }
 
@@ -109,7 +114,7 @@ public class ReservaService {
         reserva.setEstado(Reserva.EstadoEstado.RECHAZADA);
         reserva.setJustificacionRechazo(justificacion);
         reserva.setResueltoPor(resueltoPor);
-        reserva.setFechaResolucion(java.time.LocalDateTime.now());
+        reserva.setFechaResolucion(LocalDateTime.now(ZONA_COLEGIO));
         return reservaRepository.save(reserva);
     }
 
@@ -121,7 +126,7 @@ public class ReservaService {
         }
         reserva.setEstado(Reserva.EstadoEstado.CANCELADA);
         reserva.setJustificacionCancelacion(justificacion);
-        reserva.setFechaResolucion(java.time.LocalDateTime.now());
+        reserva.setFechaResolucion(LocalDateTime.now(ZONA_COLEGIO));
         return reservaRepository.save(reserva);
     }
 
@@ -134,8 +139,8 @@ public class ReservaService {
     }
 
     public void finalizarReservasVencidas() {
-        LocalDate hoy = LocalDate.now();
-        LocalTime ahora = LocalTime.now();
+        LocalDate hoy = LocalDate.now(ZONA_COLEGIO);
+        LocalTime ahora = LocalTime.now(ZONA_COLEGIO);
         List<Reserva> aprobadas = reservaRepository.findByEstado(Reserva.EstadoEstado.APROBADA);
         for (Reserva r : aprobadas) {
             LocalDate fechaReserva = LocalDate.parse(r.getFecha());
@@ -150,7 +155,7 @@ public class ReservaService {
 
     private void validarAnticipacion(String fechaStr) {
         LocalDate fechaReserva = LocalDate.parse(fechaStr);
-        LocalDate hoy = LocalDate.now();
+        LocalDate hoy = LocalDate.now(ZONA_COLEGIO);
         LocalDate minima = calcularFechaMinimaHabil(hoy);
         if (fechaReserva.isBefore(minima)) {
             throw new IllegalArgumentException("ANTICIPACION_INSUFICIENTE");

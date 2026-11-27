@@ -36,13 +36,15 @@ import java.util.Locale
 fun DetalleEspacioScreen(
     espacio: Espacio,
     viewModel: AppViewModel,
-    onSolicitar: () -> Unit,
+    onSolicitar: (fecha: String, horaInicio: String, horaTermino: String) -> Unit,
     onVolver: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val darkTheme = viewModel.darkTheme
 
-    var fechaSeleccionada by remember { mutableStateOf(DateTimeUtils.fechaMinimaHabil()) }
+    var fechaSeleccionada by remember {
+        mutableStateOf(DateTimeUtils.fechaMinimaHabil(viewModel.feriadosChile))
+    }
     var indicesSeleccionados by remember { mutableStateOf<List<Int>>(emptyList()) }
     var errorBloques by remember { mutableStateOf<String?>(null) }
     var mostrandoFormulario by remember { mutableStateOf(false) }
@@ -176,7 +178,8 @@ fun DetalleEspacioScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 proximosDias.forEach { dia ->
-                    val esHabil = DateTimeUtils.esDiaHabil(dia) && !dia.isBefore(DateTimeUtils.fechaMinimaHabil())
+                    val esHabil = DateTimeUtils.esDiaHabil(dia, viewModel.feriadosChile) &&
+                        !dia.isBefore(DateTimeUtils.fechaMinimaHabil(viewModel.feriadosChile))
                     val seleccionado = dia == fechaSeleccionada
                     val nombreDia = dia.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("es", "CL"))
                         .replaceFirstChar { it.uppercase() }
@@ -259,8 +262,11 @@ fun DetalleEspacioScreen(
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 8.dp)
         ) {
             items(bloques, key = { it.first }) { (index, rango, ocupado) ->
                 val estaSeleccionado = indicesSeleccionados.contains(index)
@@ -352,7 +358,7 @@ fun DetalleEspacioScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(72.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (puedeReservar && indicesSeleccionados.isNotEmpty()) {
             val primero = horariosDisponibles[indicesSeleccionados.first()]
@@ -361,6 +367,9 @@ fun DetalleEspacioScreen(
             val horaTermino = DateTimeUtils.calcularHoraTermino(ultimo)
 
             Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp
             ) {
@@ -384,7 +393,13 @@ fun DetalleEspacioScreen(
                         )
                     }
                     Button(
-                        onClick = { onSolicitar() },
+                        onClick = {
+                            onSolicitar(
+                                fechaSeleccionada.format(fechaDisplayFormatter),
+                                horaInicio,
+                                horaTermino
+                            )
+                        },
                         enabled = true,
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -394,6 +409,9 @@ fun DetalleEspacioScreen(
             }
         } else if (puedeReservar && indicesSeleccionados.isEmpty()) {
             Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp
             ) {
@@ -444,7 +462,11 @@ fun DetalleEspacioScreen(
                     when (resultado) {
                         is ApiResult.Ok<*> -> {
                             mostrandoFormulario = false
-                            onSolicitar()
+                            onSolicitar(
+                                fechaSeleccionada.format(fechaDisplayFormatter),
+                                horaInicio,
+                                horaTermino
+                            )
                         }
                         is ApiResult.Error -> {
                             errorBloques = resultado.mensaje

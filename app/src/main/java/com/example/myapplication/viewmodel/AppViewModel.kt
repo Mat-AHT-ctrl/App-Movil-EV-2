@@ -61,6 +61,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var currentScreen by mutableStateOf("login")
     var espacioSeleccionado: Espacio? by mutableStateOf(null)
 
+    /** Feriados legales de Chile (API externa). Vacío = solo fin de semana. */
+    var feriadosChile by mutableStateOf(emptySet<String>())
+        private set
+
+    /** Selección real del detalle (fecha dd/MM/yyyy y bloques contiguos). */
+    var reservaFecha by mutableStateOf("")
+    var reservaHoraInicio by mutableStateOf("08:15")
+    var reservaHoraTermino by mutableStateOf("09:00")
+
     /** Usuario tal como lo devuelve el backend (id UUID, rol y perfil reales). */
     var usuarioRemoto: LoginResponseDto? by mutableStateOf(null)
         private set
@@ -89,6 +98,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 crearUsuariosPredeterminados()
                 crearEspaciosPredeterminados()
+                cargarFeriados()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -103,6 +113,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun cambiarTema(activado: Boolean) {
         darkTheme = activado
         prefs.edit().putBoolean("dark_theme", activado).apply()
+    }
+
+    /** API externa: si falla, seguimos considerando solo sábado/domingo. */
+    private suspend fun cargarFeriados() {
+        when (val resultado = backend.listarFeriados(java.time.LocalDate.now().year)) {
+            is ApiResult.Ok -> feriadosChile = resultado.data.map { it.date }.toSet()
+            is ApiResult.Error -> Unit
+        }
     }
 
     // ===== SESIÓN PERSISTENTE =====

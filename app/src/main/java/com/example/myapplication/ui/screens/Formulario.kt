@@ -3,6 +3,7 @@ package com.example.myapplication.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -14,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.remote.ApiResult
+import com.example.myapplication.logic.ValidadorReserva
 import com.example.myapplication.model.Espacio
 import com.example.myapplication.utils.DateTimeUtils
 import com.example.myapplication.viewmodel.AppViewModel
@@ -33,7 +35,11 @@ fun Formulario(
     var actividad by remember { mutableStateOf("") }
     var cursoGrupo by remember { mutableStateOf("") }
     var asistentes by remember { mutableStateOf("") }
-    var fechaSeleccionada by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))) }
+    var fechaSeleccionada by remember {
+        mutableStateOf(
+            viewModel.reservaFecha.ifBlank { LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) }
+        )
+    }
     var errorMensaje by remember { mutableStateOf("") }
     var enviando by remember { mutableStateOf(false) }
 
@@ -66,7 +72,7 @@ fun Formulario(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${fechaSeleccionada} · Horario seleccionado",
+                    text = "${fechaSeleccionada} · ${viewModel.reservaHoraInicio} - ${viewModel.reservaHoraTermino}",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
@@ -77,6 +83,11 @@ fun Formulario(
             }
         }
 
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
         Spacer(modifier = Modifier.height(20.dp))
 
         OutlinedTextField(
@@ -127,15 +138,17 @@ fun Formulario(
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
+        }
 
+        Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = {
-                if (actividad.isBlank() || cursoGrupo.isBlank() || asistentes.isBlank()) {
-                    errorMensaje = "Por favor, completa todos los campos obligatorios"
-                } else if (asistentes.toIntOrNull() == null || asistentes.toInt() <= 0) {
-                    errorMensaje = "Ingresa un número válido de asistentes"
-                } else if (fechaSeleccionada.isBlank()) {
-                    errorMensaje = "Selecciona una fecha"
+                val error = ValidadorReserva.validarFormulario(
+                    actividad, cursoGrupo, asistentes, espacio.capacidad
+                ) ?: if (fechaSeleccionada.isBlank()) "Selecciona una fecha" else null
+
+                if (error != null) {
+                    errorMensaje = error
                 } else {
                     enviando = true
                     errorMensaje = ""
@@ -145,8 +158,8 @@ fun Formulario(
                         val solicitanteNombre = viewModel.usuarioRemoto?.nombre ?: viewModel.currentUser?.nombre ?: ""
                         val perfilSolicitante = viewModel.usuarioRemoto?.perfil ?: viewModel.currentUser?.rol ?: "DOCENTE"
 
-                        val horaInicioFinal = "08:15"
-                        val horaTerminoFinal = DateTimeUtils.calcularHoraTermino(horaInicioFinal)
+                        val horaInicioFinal = viewModel.reservaHoraInicio
+                        val horaTerminoFinal = viewModel.reservaHoraTermino
 
                         val resultado = viewModel.crearReservaBackend(
                             espacioId = espacio.id,

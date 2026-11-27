@@ -50,22 +50,26 @@ object DateTimeUtils {
 
     // ===== Validaciones de calendario =====
 
-    fun esDiaHabil(fecha: LocalDate): Boolean =
-        fecha.dayOfWeek != DayOfWeek.SATURDAY && fecha.dayOfWeek != DayOfWeek.SUNDAY
+    /** Día hábil: no sábado/domingo y, si se cargaron feriados, no feriado legal. */
+    fun esDiaHabil(fecha: LocalDate, feriados: Set<String> = emptySet()): Boolean =
+        fecha.dayOfWeek != DayOfWeek.SATURDAY &&
+            fecha.dayOfWeek != DayOfWeek.SUNDAY &&
+            !feriados.contains(fecha.format(fechaDbFormatter))
 
-    /**
-     * Fecha mínima habil: mañana si es día hábil; si hoy es viernes/sábado/domingo → lunes siguiente.
-     */
-    fun fechaMinimaHabil(): LocalDate {
+    /** Fecha mínima hábil desde hoy, saltando fines de semana y feriados. */
+    fun fechaMinimaHabil(feriados: Set<String> = emptySet()): LocalDate {
         var cursor = LocalDate.now().plusDays(1)
-        while (!esDiaHabil(cursor)) {
+        while (!esDiaHabil(cursor, feriados)) {
             cursor = cursor.plusDays(1)
         }
         return cursor
     }
 
-    fun esFechaValidaParaReserva(fecha: String): Boolean {
+    fun esFechaValidaParaReserva(
+        fecha: String,
+        feriados: Set<String> = emptySet()
+    ): Boolean {
         val fechaObj = LocalDate.parse(fecha, fechaDbFormatter)
-        return esDiaHabil(fechaObj) && !fechaObj.isBefore(fechaMinimaHabil())
+        return esDiaHabil(fechaObj, feriados) && !fechaObj.isBefore(fechaMinimaHabil(feriados))
     }
 }
