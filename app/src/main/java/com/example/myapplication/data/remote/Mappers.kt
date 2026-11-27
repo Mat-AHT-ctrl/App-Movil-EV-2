@@ -3,12 +3,7 @@ package com.example.myapplication.data.remote
 import com.example.myapplication.model.Espacio
 import com.example.myapplication.model.Reserva
 
-/**
- * Conversion entre el JSON del backend (enums en MAYUSCULAS) y los modelos
- * que ya usa la app (texto capitalizado: "Disponible", "Pendiente", ...).
- *
- * Si se agrega un estado nuevo en el backend, solo hay que tocar aqui.
- */
+
 object EstadoMapper {
 
     // ---------- Espacio ----------
@@ -48,14 +43,7 @@ object EstadoMapper {
     }
 }
 
-/**
- * DTO -> entidad Room.
- *
- * Solo los espacios se mapean directo, porque su estructura coincide.
- * Las reservas del backend traen id UUID y usuarioId String, mientras que
- * la tabla local usa id Int y usuarioId Int: esa conversion se resuelve en
- * la capa de repositorio cuando se implemente la sincronizacion.
- */
+
 fun EspacioDto.toEspacio(): Espacio = Espacio(
     id = id,
     nombre = nombre,

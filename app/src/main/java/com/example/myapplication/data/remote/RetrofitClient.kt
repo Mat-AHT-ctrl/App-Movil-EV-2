@@ -7,16 +7,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-/**
- * Cliente HTTP unico de la app.
- *
- * La URL NO esta hardcodeada: viene de BuildConfig.BASE_URL, definida en
- * app/build.gradle.kts. Para apuntar a otro backend:
- *
- *   .\gradlew.bat :app:assembleDebug -PBACKEND_URL=http://10.0.2.2:8080/
- *
- * (10.0.2.2 es el localhost de tu PC visto desde el emulador Android)
- */
+
 object RetrofitClient {
 
     /** Timeouts largos a proposito: el plan free de Render duerme el servicio. */

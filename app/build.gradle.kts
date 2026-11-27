@@ -19,30 +19,24 @@ val keystoreProps = Properties().apply {
 val releaseStoreFile = keystoreProps.getProperty("release.keystore.file")?.let { rootProject.file(it) }
 val hayFirmaRelease = releaseStoreFile != null && releaseStoreFile!!.exists()
 
-// URL del backend. Por defecto apunta a Render (produccion).
-// Para usar el backend local:
-//   .\gradlew.bat :app:assembleDebug -PBACKEND_URL=http://10.0.2.2:8080/
-//   (10.0.2.2 = localhost del PC visto desde el emulador)
+
 val backendUrl: String = (project.findProperty("BACKEND_URL") as String?)
     ?: "https://app-movil-ev-2.onrender.com/"
 
 android {
-    // El codigo vive en com.example.myapplication: alineamos el namespace
-    // para que BuildConfig y R queden en el mismo paquete que las clases.
-    // applicationId se mantiene para no cambiar la identidad de la app instalada.
+
     namespace = "com.example.myapplication"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.ep2"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 37
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // URL base de Retrofit, leida en RetrofitClient.kt
         buildConfigField("String", "BASE_URL", "\"$backendUrl\"")
     }
 
@@ -62,8 +56,6 @@ android {
             if (hayFirmaRelease) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            // R8 con packageScope rompia Kotlin en runtime (IllegalAccessError
-            // en MainActivity.onCreate). El EFT pide firmado, no minificado.
         }
     }
     compileOptions {

@@ -28,7 +28,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.myapplication.model.ArchivoItem
 import kotlin.math.roundToInt
 
-/** Vista previa pequeña: imagen, primera página de PDF o icono del formato. */
 @Composable
 fun ArchivoPreview(
     archivo: ArchivoItem,
@@ -142,7 +141,6 @@ private fun miniatura(context: Context, archivo: ArchivoItem): Bitmap? {
     }
 }
 
-/** Miniatura de imagen: máximo 640px en el lado mayor, con rotación EXIF. */
 private fun miniaturaImagen(context: Context, uri: Uri): Bitmap? {
     val maxLado = 640
 

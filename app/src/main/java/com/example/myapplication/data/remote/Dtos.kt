@@ -1,12 +1,6 @@
 package com.example.myapplication.data.remote
 
-/**
- * DTOs: reflejan exactamente el JSON que devuelve el backend Spring Boot.
- *
- * No se usan directamente en la UI; se convierten con [Mappers].
- * Se mantienen separados de las entidades Room para que un cambio en la API
- * no obligue a migrar la base de datos local.
- */
+
 
 // ---------- Autenticacion ----------
 

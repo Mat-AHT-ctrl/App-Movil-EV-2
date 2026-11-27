@@ -3,10 +3,7 @@ package com.example.myapplication.logic
 import com.example.myapplication.utils.DateTimeUtils
 import java.time.LocalDate
 
-/**
- * Validaciones de formularios y reglas basicas del caso DSY1105.
- * Logica pura: se prueba con tests unitarios sin Android.
- */
+
 object ValidadorReserva {
 
     fun validarNombre(nombre: String): String? =
@@ -29,7 +26,6 @@ object ValidadorReserva {
     fun validarJustificacion(justificacion: String): String? =
         if (justificacion.trim().length < 10) "La justificación debe tener al menos 10 caracteres" else null
 
-    /** Combina las validaciones del formulario de reserva. */
     fun validarFormulario(
         motivo: String,
         curso: String,
@@ -42,7 +38,6 @@ object ValidadorReserva {
     fun esDiaHabil(fecha: LocalDate, feriados: Set<String> = emptySet()): Boolean =
         DateTimeUtils.esDiaHabil(fecha, feriados)
 
-    /** Choque simple de reservas aprobadas/pendientes en el mismo espacio, fecha y bloque. */
     fun hayChoqueHorario(
         espacioId: String,
         fecha: String,

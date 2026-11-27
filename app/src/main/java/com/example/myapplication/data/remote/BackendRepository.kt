@@ -18,12 +18,7 @@ sealed interface ApiResult<out T> {
     data class Error(val codigo: String, val mensaje: String) : ApiResult<Nothing>
 }
 
-/**
- * Unico punto de acceso al backend.
- *
- * La UI nunca llama a [RetrofitClient.api] directamente: pasa por aca,
- * asi los errores se traducen a mensajes entendibles.
- */
+
 class BackendRepository(
     private val api: ApiService = RetrofitClient.api
 ) {
@@ -35,10 +30,7 @@ class BackendRepository(
     suspend fun login(email: String, password: String): ApiResult<LoginResponseDto> =
         llamar { api.login(LoginRequestDto(email = email, password = password)) }
 
-    /**
-     * Registro de personal vía backend. El rol SIEMPRE es SOLICITANTE;
-     * el único ADMIN es el superusuario del backend.
-     */
+
     suspend fun registrar(
         nombre: String,
         email: String,
