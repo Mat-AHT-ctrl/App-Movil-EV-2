@@ -27,6 +27,7 @@ fun Register(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var cargo by remember { mutableStateOf("DOCENTE") }
+    var expandedCargo by remember { mutableStateOf(false) }
     var errorMensaje by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
 
@@ -76,25 +77,25 @@ fun Register(
 
         // Cargo (perfil) - SIEMPRE queda como SOLICITANTE, nunca ADMIN
         ExposedDropdownMenuBox(
-            expanded = false,
-            onExpandedChange = {}
+            expanded = expandedCargo,
+            onExpandedChange = { expandedCargo = it }
         ) {
             OutlinedTextField(
                 value = cargos.first { it.first == cargo }.second,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Cargo") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCargo) },
                 modifier = Modifier.fillMaxWidth().menuAnchor()
             )
             ExposedDropdownMenu(
-                expanded = false,
-                onDismissRequest = {}
+                expanded = expandedCargo,
+                onDismissRequest = { expandedCargo = false }
             ) {
                 cargos.forEach { (codigo, etiqueta) ->
                     DropdownMenuItem(
                         text = { Text(etiqueta) },
-                        onClick = { cargo = codigo }
+                        onClick = { cargo = codigo; expandedCargo = false }
                     )
                 }
             }

@@ -17,6 +17,16 @@ interface ReservaDao {
     @Query("SELECT * FROM reservas WHERE espacioId = :espacioId AND fecha = :fecha AND estado != 'Rechazada' AND estado != 'Cancelada' ORDER BY horaInicio ASC")
     suspend fun getByEspacioYFecha(espacioId: String, fecha: String): List<Reserva>
 
+    /** Espejo local de una reserva del backend (UUID remoto vs id Int local). */
+    @Query("SELECT * FROM reservas WHERE espacioId = :espacioId AND fecha = :fecha AND horaInicio = :horaInicio AND horaTermino = :horaTermino AND usuarioId = :usuarioId LIMIT 1")
+    suspend fun findEquivalente(
+        espacioId: String,
+        fecha: String,
+        horaInicio: String,
+        horaTermino: String,
+        usuarioId: Int
+    ): Reserva?
+
     @Query("SELECT * FROM reservas ORDER BY fecha DESC, horaInicio ASC")
     suspend fun getAll(): List<Reserva>
 

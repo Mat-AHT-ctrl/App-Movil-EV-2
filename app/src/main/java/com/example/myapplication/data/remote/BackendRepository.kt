@@ -150,6 +150,8 @@ class BackendRepository(
     /** Traduce los codigos del backend a mensajes para el usuario. */
     private fun mensajeDe(codigo: String, mensajeBackend: String?): String = when (codigo) {
         "CREDENCIALES_INVALIDAS" -> "Correo o contraseña incorrectos."
+        "EMAIL_YA_EXISTE" -> "Ya existe una cuenta con ese correo."
+        "PERFIL_NO_VALIDO" -> "El cargo seleccionado no es válido."
         "ANTICIPACION_INSUFICIENTE" -> "Debes reservar con al menos 1 día hábil de anticipación."
         "HORARIO_OCUPADO" -> "Ese horario ya está ocupado. Elige otro bloque."
         "CAPACIDAD_EXCEDIDA" -> "La cantidad de asistentes supera la capacidad del espacio."

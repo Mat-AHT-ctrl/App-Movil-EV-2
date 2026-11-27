@@ -1,6 +1,7 @@
 package com.example.myapplication.data.remote
 
 import com.example.myapplication.model.Espacio
+import com.example.myapplication.model.Reserva
 
 /**
  * Conversion entre el JSON del backend (enums en MAYUSCULAS) y los modelos
@@ -64,4 +65,16 @@ fun EspacioDto.toEspacio(): Espacio = Espacio(
     capacidad = capacidad,
     horarioFuncionamiento = horarioFuncionamiento,
     estado = EstadoMapper.espacioDesdeBackend(estado)
+)
+
+/** Reserva del backend -> entidad Room (espejo local). */
+fun ReservaDto.toReservaLocal(usuarioIdLocal: Int): Reserva = Reserva(
+    espacioId = espacioId,
+    espacioNombre = espacioNombre,
+    usuarioId = usuarioIdLocal,
+    fecha = fecha,
+    horaInicio = horaInicio,
+    horaTermino = horaTermino,
+    estado = EstadoMapper.reservaDesdeBackend(estado),
+    justificacionRechazo = justificacionRechazo
 )

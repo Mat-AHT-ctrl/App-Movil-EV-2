@@ -12,10 +12,12 @@ import com.example.myapplication.data.local.DatabaseProvider
 import com.example.myapplication.data.remote.ApiResult
 import com.example.myapplication.data.remote.BackendRepository
 import com.example.myapplication.data.remote.EspacioDto
+import com.example.myapplication.data.remote.EstadoMapper
 import com.example.myapplication.data.remote.LoginResponseDto
 import com.example.myapplication.data.remote.ReservaDto
 import com.example.myapplication.data.remote.ReservaRequestDto
 import com.example.myapplication.data.remote.toEspacio
+import com.example.myapplication.data.remote.toReservaLocal
 import com.example.myapplication.model.ArchivoItem
 import com.example.myapplication.model.Espacio
 import com.example.myapplication.model.Reserva
@@ -28,6 +30,25 @@ sealed interface LoginResult {
     data object CredencialesInvalidas : LoginResult
     data class Error(val mensaje: String) : LoginResult
 }
+
+/** Reserva lista para Mis Reservas / Inspectoría (local u remota). */
+data class ReservaVista(
+    val idLocal: Int = 0,
+    val idRemota: String? = null,
+    val espacioId: String = "",
+    val espacioNombre: String,
+    val usuarioId: String = "",
+    val solicitanteNombre: String = "",
+    val perfilSolicitante: String = "",
+    val fecha: String,
+    val horaInicio: String,
+    val horaTermino: String,
+    val actividad: String = "",
+    val cursoGrupo: String = "",
+    val asistentes: Int = 0,
+    val estado: String,
+    val justificacion: String? = null
+)
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -61,7 +82,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         get() = _currentUser
 
     val esAdmin: Boolean
-        get() = _currentUser?.rol == "admin"
+        get() = _currentUser?.rol.equals("admin", ignoreCase = true)
 
     init {
         viewModelScope.launch {
@@ -109,7 +130,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val modOffline = prefs.getBoolean("sesion_modoffline", false)
 
         usuarioRemoto = LoginResponseDto(id = id, nombre = nombre, email = email, rol = rol, perfil = perfil)
-        _currentUser = Usuario(0, nombre, email, "", rol)
+        // Backend guarda "ADMIN"; la app usa "admin" en minusculas.
+        val rolLocal = if (rol.equals("ADMIN", ignoreCase = true)) "admin" else "profesor"
+        _currentUser = Usuario(0, nombre, email, "", rolLocal)
         modoOffline = modOffline
         if (!modoOffline) {
             currentScreen = "catalogo"
@@ -256,9 +279,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         cursoGrupo: String,
         asistentes: Int,
         observaciones: String? = null
-    ): ApiResult<ReservaDto> =
-        backend.crearReserva(
-            com.example.myapplication.data.remote.ReservaRequestDto(
+    ): ApiResult<ReservaDto> {
+        val resultado = backend.crearReserva(
+            ReservaRequestDto(
                 espacioId = espacioId,
                 espacioNombre = espacioNombre,
                 usuarioId = usuarioId,
@@ -273,6 +296,94 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 observaciones = observaciones
             )
         )
+        if (resultado is ApiResult.Ok) guardarReservaLocal(resultado.data)
+        return resultado
+    }
+
+    // ===== SINCRONIZACION API <-> ROOM =====
+
+    private fun ReservaDto.aVista() = ReservaVista(
+        idRemota = id,
+        espacioId = espacioId,
+        espacioNombre = espacioNombre,
+        usuarioId = usuarioId,
+        solicitanteNombre = solicitanteNombre,
+        perfilSolicitante = perfilSolicitante,
+        fecha = fecha,
+        horaInicio = horaInicio,
+        horaTermino = horaTermino,
+        actividad = actividad,
+        cursoGrupo = cursoGrupo,
+        asistentes = asistentes,
+        estado = EstadoMapper.reservaDesdeBackend(estado),
+        justificacion = justificacionRechazo ?: justificacionCancelacion
+    )
+
+    private fun Reserva.aVista() = ReservaVista(
+        idLocal = id,
+        espacioId = espacioId,
+        espacioNombre = espacioNombre,
+        fecha = fecha,
+        horaInicio = horaInicio,
+        horaTermino = horaTermino,
+        estado = estado,
+        justificacion = justificacionRechazo
+    )
+
+    private suspend fun guardarReservaLocal(dto: ReservaDto) {
+        val usuarioIdLocal = _currentUser?.id ?: return
+        val dao = database.reservaDao()
+        val existente = dao.findEquivalente(
+            espacioId = dto.espacioId,
+            fecha = dto.fecha,
+            horaInicio = dto.horaInicio,
+            horaTermino = dto.horaTermino,
+            usuarioId = usuarioIdLocal
+        )
+        val copia = dto.toReservaLocal(usuarioIdLocal)
+        if (existente == null) dao.insert(copia) else dao.update(copia.copy(id = existente.id))
+    }
+
+    /** Mis Reservas: API primero, Room como cache/offline. */
+    suspend fun sincronizarMisReservas(): List<ReservaVista> {
+        val remotas = when (val r = backend.listarReservas()) {
+            is ApiResult.Ok -> r.data
+            is ApiResult.Error -> emptyList()
+        }
+        val mias = if (usuarioRemoto != null) {
+            remotas.filter { it.usuarioId == usuarioRemoto?.id }
+        } else remotas
+        mias.forEach { guardarReservaLocal(it) }
+
+        val usuarioIdLocal = _currentUser?.id
+        val locales = if (usuarioIdLocal != null) {
+            database.reservaDao().getByUsuario(usuarioIdLocal)
+        } else emptyList()
+        return if (locales.isNotEmpty()) locales.map { it.aVista() } else mias.map { it.aVista() }
+    }
+
+    /** Panel Inspectoría: pendientes del backend con fallback local. */
+    suspend fun listarPendientesParaAdmin(): ApiResult<List<ReservaVista>> =
+        when (val r = backend.listarPendientes()) {
+            is ApiResult.Ok -> ApiResult.Ok(r.data.map { it.aVista() })
+            is ApiResult.Error -> ApiResult.Ok(database.reservaDao().getPendientes().map { it.aVista() })
+        }
+
+    suspend fun aprobarReservaRemota(idRemota: String): ApiResult<ReservaDto> =
+        backend.aprobar(idRemota, usuarioRemoto?.id ?: _currentUser?.id.toString())
+
+    suspend fun rechazarReservaRemota(idRemota: String, justificacion: String): ApiResult<ReservaDto> =
+        backend.rechazar(idRemota, justificacion, usuarioRemoto?.id ?: _currentUser?.id.toString())
+
+    suspend fun cancelarReservaRemota(idRemota: String): ApiResult<ReservaDto> {
+        val resultado = backend.cancelar(
+            idRemota,
+            "Cancelada por el solicitante",
+            usuarioRemoto?.id ?: _currentUser?.id.toString()
+        )
+        if (resultado is ApiResult.Ok) guardarReservaLocal(resultado.data)
+        return resultado
+    }
 
     /**
      * Devuelve los tipos de espacio únicos disponibles para los filtros del catálogo.
