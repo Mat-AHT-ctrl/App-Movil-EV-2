@@ -1,5 +1,6 @@
 package com.marcela_paz.backend.controller;
 
+import com.marcela_paz.backend.dto.EstadoEspacioRequest;
 import com.marcela_paz.backend.model.Espacio;
 import com.marcela_paz.backend.repository.EspacioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,5 +24,17 @@ public class EspacioController {
     public Espacio obtener(@PathVariable String id) {
         return espacioRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("ESPACIO_NO_ENCONTRADO"));
+    }
+
+    @PatchMapping("/{id}/estado")
+    public Espacio cambiarEstado(@PathVariable String id, @RequestBody EstadoEspacioRequest request) {
+        Espacio espacio = espacioRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("ESPACIO_NO_ENCONTRADO"));
+        try {
+            espacio.setEstado(Espacio.EstadoEstado.valueOf(request.getEstado().trim().toUpperCase()));
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("ESTADO_NO_VALIDO");
+        }
+        return espacioRepository.save(espacio);
     }
 }

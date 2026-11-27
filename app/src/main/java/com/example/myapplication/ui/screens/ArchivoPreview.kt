@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
 fun ArchivoPreview(
     archivo: ArchivoItem,
     onDismiss: () -> Unit,
-    onAbrirExterno: () -> Unit,
+    onAbrirVisor: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -100,8 +100,8 @@ fun ArchivoPreview(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onAbrirExterno) {
-                        Text("Abrir con app")
+                    TextButton(onClick = onAbrirVisor) {
+                        Text("Ver en pantalla completa")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onDismiss) {

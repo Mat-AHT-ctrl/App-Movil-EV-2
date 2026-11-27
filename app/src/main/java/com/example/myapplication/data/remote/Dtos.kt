@@ -44,6 +44,10 @@ data class EspacioDto(
     val estado: String    // DISPONIBLE | EN_MANTENIMIENTO | FUERA_DE_SERVICIO
 )
 
+data class EstadoEspacioRequestDto(
+    val estado: String   // DISPONIBLE | EN_MANTENIMIENTO | FUERA_DE_SERVICIO
+)
+
 // ---------- Reservas ----------
 
 data class ReservaRequestDto(

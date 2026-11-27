@@ -35,7 +35,8 @@ fun Formulario(
     var actividad by remember { mutableStateOf("") }
     var cursoGrupo by remember { mutableStateOf("") }
     var asistentes by remember { mutableStateOf("") }
-    var fechaSeleccionada by remember {
+    // Viene del paso anterior (detalle del espacio); no se puede editar acá.
+    val fechaSeleccionada by remember {
         mutableStateOf(
             viewModel.reservaFecha.ifBlank { LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) }
         )
@@ -48,6 +49,8 @@ fun Formulario(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .imePadding()
             .padding(16.dp)
     ) {
         Text(
@@ -83,11 +86,6 @@ fun Formulario(
             }
         }
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-        ) {
         Spacer(modifier = Modifier.height(20.dp))
 
         OutlinedTextField(
@@ -119,16 +117,7 @@ fun Formulario(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = fechaSeleccionada,
-            onValueChange = { fechaSeleccionada = it; errorMensaje = "" },
-            label = { Text("Fecha *") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (errorMensaje.isNotEmpty()) {
             Text(
@@ -138,14 +127,13 @@ fun Formulario(
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
-        }
 
         Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = {
                 val error = ValidadorReserva.validarFormulario(
                     actividad, cursoGrupo, asistentes, espacio.capacidad
-                ) ?: if (fechaSeleccionada.isBlank()) "Selecciona una fecha" else null
+                )
 
                 if (error != null) {
                     errorMensaje = error
@@ -210,7 +198,7 @@ fun Formulario(
                 contentColor = Color(0xFF7E88EB)
             )
         ) {
-            Text("Cancelar y Volver")
+            Text("Volver al detalle")
         }
     }
 }

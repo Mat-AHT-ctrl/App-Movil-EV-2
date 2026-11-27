@@ -11,6 +11,8 @@ import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.DatabaseProvider
 import com.example.myapplication.data.remote.ApiResult
 import com.example.myapplication.data.remote.BackendRepository
+import com.example.myapplication.data.remote.BloqueoDto
+import com.example.myapplication.data.remote.BloqueoRequestDto
 import com.example.myapplication.data.remote.EspacioDto
 import com.example.myapplication.data.remote.EstadoMapper
 import com.example.myapplication.data.remote.LoginResponseDto
@@ -150,11 +152,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         usuarioRemoto = LoginResponseDto(id = id, nombre = nombre, email = email, rol = rol, perfil = perfil)
         // Backend guarda "ADMIN"; la app usa "admin" en minusculas.
         val rolLocal = if (rol.equals("ADMIN", ignoreCase = true)) "admin" else "profesor"
-        _currentUser = Usuario(0, nombre, email, "", rolLocal)
+        // El usuario local debe existir en Room (FK de reservas). Si la sesión
+        // se restauró de SharedPreferences, creamos su espejo con id real.
+        viewModelScope.launch {
+            val dao = database.usuarioDao()
+            val existente = dao.getByEmail(email)
+            val local = if (existente == null) {
+                val nuevo = Usuario(0, nombre, email, "", rolLocal)
+                nuevo.copy(id = dao.insert(nuevo).toInt())
+            } else {
+                val actualizado = existente.copy(nombre = nombre, rol = rolLocal)
+                dao.update(actualizado)
+                actualizado
+            }
+            _currentUser = local
+        }
         modoOffline = modOffline
         if (!modoOffline) {
             currentScreen = "catalogo"
         }
+    }
+
+    /** Asegura un usuario local con id válido antes de insertar en Room. */
+    private suspend fun usuarioLocalId(): Int {
+        _currentUser?.id?.takeIf { it > 0 }?.let { return it }
+        val remoto = usuarioRemoto ?: return 0
+        val dao = database.usuarioDao()
+        val existente = dao.getByEmail(remoto.email)
+        if (existente != null) {
+            _currentUser = existente
+            return existente.id
+        }
+        val rolLocal = if (remoto.rol.equals("ADMIN", ignoreCase = true)) "admin" else "profesor"
+        val nuevo = Usuario(0, remoto.nombre, remoto.email, "", rolLocal)
+        val id = dao.insert(nuevo).toInt()
+        _currentUser = nuevo.copy(id = id)
+        return id
     }
 
     /** Limpia la sesión persistente. */
@@ -318,6 +351,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return resultado
     }
 
+    /** Cambia el estado de un espacio en el backend y en el espejo local. */
+    suspend fun cambiarEstadoEspacio(espacio: Espacio, estadoBackend: String): ApiResult<EspacioDto> {
+        val resultado = backend.cambiarEstadoEspacio(espacio.id, estadoBackend)
+        if (resultado is ApiResult.Ok) {
+            database.espacioDao().update(
+                espacio.copy(estado = EstadoMapper.espacioDesdeBackend(estadoBackend))
+            )
+        }
+        return resultado
+    }
+
     // ===== SINCRONIZACION API <-> ROOM =====
 
     private fun ReservaDto.aVista() = ReservaVista(
@@ -349,7 +393,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     private suspend fun guardarReservaLocal(dto: ReservaDto) {
-        val usuarioIdLocal = _currentUser?.id ?: return
+        val usuarioIdLocal = usuarioLocalId()
+        if (usuarioIdLocal == 0) return
         val dao = database.reservaDao()
         val existente = dao.findEquivalente(
             espacioId = dto.espacioId,
@@ -373,8 +418,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         } else remotas
         mias.forEach { guardarReservaLocal(it) }
 
-        val usuarioIdLocal = _currentUser?.id
-        val locales = if (usuarioIdLocal != null) {
+        val usuarioIdLocal = usuarioLocalId()
+        val locales = if (usuarioIdLocal > 0) {
             database.reservaDao().getByUsuario(usuarioIdLocal)
         } else emptyList()
         return if (locales.isNotEmpty()) locales.map { it.aVista() } else mias.map { it.aVista() }
@@ -402,6 +447,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (resultado is ApiResult.Ok) guardarReservaLocal(resultado.data)
         return resultado
     }
+
+    // ===== BLOQUEOS (Inspectoría) =====
+
+    suspend fun listarBloqueos(): ApiResult<List<BloqueoDto>> = backend.listarBloqueos()
+
+    suspend fun crearBloqueo(request: BloqueoRequestDto): ApiResult<BloqueoDto> =
+        backend.crearBloqueo(request)
+
+    suspend fun eliminarBloqueo(id: String): ApiResult<Unit> = backend.eliminarBloqueo(id)
 
     /**
      * Devuelve los tipos de espacio únicos disponibles para los filtros del catálogo.

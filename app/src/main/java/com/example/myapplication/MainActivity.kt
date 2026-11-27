@@ -23,6 +23,7 @@ import com.example.myapplication.ui.screens.File
 import com.example.myapplication.ui.screens.Formulario
 import com.example.myapplication.ui.screens.Login
 import com.example.myapplication.ui.screens.MisReservas
+import com.example.myapplication.ui.screens.Profile
 import com.example.myapplication.ui.screens.Register
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.AppViewModel
@@ -91,12 +92,10 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                         onClick = { viewModel.currentScreen = "files" }
                     )
                     NavigationBarItem(
-                        icon = { Text("🚪") },
-                        label = { Text("Salir") },
-                        selected = false,
-                        onClick = {
-                            viewModel.logout()
-                        }
+                        icon = { Text("👤") },
+                        label = { Text("Perfil") },
+                        selected = viewModel.currentScreen == "perfil",
+                        onClick = { viewModel.currentScreen = "perfil" }
                     )
                 }
             }
@@ -195,6 +194,10 @@ fun MainAppNavigator(viewModel: AppViewModel) {
                     "files" -> File(
                         viewModel = viewModel,
                         onBack = { viewModel.currentScreen = "catalogo" }
+                    )
+                    "perfil" -> Profile(
+                        viewModel = viewModel,
+                        onLogout = { viewModel.logout() }
                     )
                 }
             }

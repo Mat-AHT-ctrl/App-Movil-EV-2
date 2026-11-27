@@ -42,6 +42,7 @@ fun File(
     val coroutineScope = rememberCoroutineScope()
     val archivos by viewModel.archivosFlow.collectAsState(initial = emptyList())
     var selectedArchivo by remember { mutableStateOf<ArchivoItem?>(null) }
+    var visorArchivo by remember { mutableStateOf<ArchivoItem?>(null) }
 
     val openDocumentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -232,23 +233,14 @@ fun File(
                 ArchivoPreview(
                     archivo = selectedArchivo!!,
                     onDismiss = { selectedArchivo = null },
-                    onAbrirExterno = {
-                        if (selectedArchivo!!.uri != null) {
-                            try {
-                                val uri = Uri.parse(selectedArchivo!!.uri)
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "No se puede abrir el archivo", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
+                    onAbrirVisor = { visorArchivo = selectedArchivo }
                 )
             }
         }
+    }
+
+    visorArchivo?.let { archivo ->
+        VisorArchivo(archivo = archivo, onDismiss = { visorArchivo = null })
     }
 }
 

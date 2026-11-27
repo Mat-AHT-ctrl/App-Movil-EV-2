@@ -61,6 +61,9 @@ class BackendRepository(
     suspend fun listarEspacios(): ApiResult<List<EspacioDto>> =
         llamar { api.listarEspacios() }
 
+    suspend fun cambiarEstadoEspacio(id: String, estado: String): ApiResult<EspacioDto> =
+        llamar { api.cambiarEstadoEspacio(id, EstadoEspacioRequestDto(estado)) }
+
     // ---------- Reservas ----------
 
     suspend fun crearReserva(request: ReservaRequestDto): ApiResult<ReservaDto> =

@@ -27,6 +27,12 @@ interface ApiService {
     @GET("api/espacios/{id}")
     suspend fun obtenerEspacio(@Path("id") id: String): EspacioDto
 
+    @PATCH("api/espacios/{id}/estado")
+    suspend fun cambiarEstadoEspacio(
+        @Path("id") id: String,
+        @Body request: EstadoEspacioRequestDto
+    ): EspacioDto
+
     // ---------- Reservas ----------
     @POST("api/reservas")
     suspend fun crearReserva(@Body request: ReservaRequestDto): ReservaDto

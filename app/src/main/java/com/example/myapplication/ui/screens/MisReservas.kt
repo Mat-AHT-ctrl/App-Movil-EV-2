@@ -30,15 +30,11 @@ fun MisReservas(
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Mis Reservas",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = onVolver) { Text("Volver") }
-        }
+        Text(
+            text = "Mis Reservas",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
 
         if (viewModel.modoOffline) {
             Spacer(modifier = Modifier.height(8.dp))
