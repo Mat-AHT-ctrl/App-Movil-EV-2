@@ -119,6 +119,21 @@ class ReglasNegocioTest {
         assertEquals("Mantenimiento", EstadoMapper.espacioDesdeBackend("EN_MANTENIMIENTO"))
     }
 
+    @Test
+    fun estadoEspacioHaciaBackend_disponible() {
+        assertEquals("DISPONIBLE", EstadoMapper.espacioHaciaBackend("Disponible"))
+    }
+
+    @Test
+    fun estadoEspacioHaciaBackend_fueraDeServicio() {
+        assertEquals("FUERA_DE_SERVICIO", EstadoMapper.espacioHaciaBackend("Fuera de servicio"))
+    }
+
+    @Test
+    fun estadoReservaDesdeBackend_finalizada() {
+        assertEquals("Finalizada", EstadoMapper.reservaDesdeBackend("FINALIZADA"))
+    }
+
     // ---------- ValidadorReserva ----------
 
     @Test
