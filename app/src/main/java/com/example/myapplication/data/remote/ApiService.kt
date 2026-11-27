@@ -20,6 +20,15 @@ interface ApiService {
     @POST("api/auth/register")
     suspend fun registrar(@Body request: RegisterRequestDto): LoginResponseDto
 
+    @POST("api/auth/forgot-password")
+    suspend fun solicitarResetPassword(@Body request: ForgotPasswordRequestDto): ForgotPasswordResponseDto
+
+    @POST("api/auth/reset-password")
+    suspend fun confirmarResetPassword(@Body request: ResetPasswordRequestDto)
+
+    @POST("api/auth/change-password")
+    suspend fun cambiarPassword(@Body request: ChangePasswordRequestDto)
+
     // ---------- Espacios ----------
     @GET("api/espacios")
     suspend fun listarEspacios(): List<EspacioDto>

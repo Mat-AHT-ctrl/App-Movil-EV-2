@@ -56,6 +56,25 @@ class BackendRepository(
             )
         }
 
+    // ---------- Recuperación / cambio de contraseña ----------
+
+    suspend fun solicitarResetPassword(email: String): ApiResult<ForgotPasswordResponseDto> =
+        llamar { api.solicitarResetPassword(ForgotPasswordRequestDto(email)) }
+
+    suspend fun confirmarResetPassword(
+        email: String,
+        codigo: String,
+        nuevaPassword: String
+    ): ApiResult<Unit> =
+        llamar { api.confirmarResetPassword(ResetPasswordRequestDto(email, codigo, nuevaPassword)) }
+
+    suspend fun cambiarPassword(
+        email: String,
+        passwordActual: String,
+        nuevaPassword: String
+    ): ApiResult<Unit> =
+        llamar { api.cambiarPassword(ChangePasswordRequestDto(email, passwordActual, nuevaPassword)) }
+
     // ---------- Espacios ----------
 
     suspend fun listarEspacios(): ApiResult<List<EspacioDto>> =
@@ -158,6 +177,9 @@ class BackendRepository(
     /** Traduce los codigos del backend a mensajes para el usuario. */
     private fun mensajeDe(codigo: String, mensajeBackend: String?): String = when (codigo) {
         "CREDENCIALES_INVALIDAS" -> "Correo o contraseña incorrectos."
+        "USUARIO_NO_ENCONTRADO" -> "No existe una cuenta con ese correo."
+        "CODIGO_INVALIDO" -> "El código es incorrecto o ha expirado."
+        "PASSWORD_NO_VALIDA" -> "La contraseña debe tener al menos 6 caracteres."
         "EMAIL_YA_EXISTE" -> "Ya existe una cuenta con ese correo."
         "PERFIL_NO_VALIDO" -> "El cargo seleccionado no es válido."
         "ANTICIPACION_INSUFICIENTE" -> "Debes reservar con al menos 1 día hábil de anticipación."

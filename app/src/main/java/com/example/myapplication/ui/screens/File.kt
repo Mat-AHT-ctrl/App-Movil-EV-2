@@ -1,8 +1,8 @@
 package com.example.myapplication.ui.screens
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
@@ -18,7 +18,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,7 +31,6 @@ import com.example.myapplication.model.ArchivoItem
 import com.example.myapplication.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 import java.io.File as JavaFile
-import java.io.FileOutputStream
 
 @Composable
 fun File(
@@ -43,6 +42,7 @@ fun File(
     val archivos by viewModel.archivosFlow.collectAsState(initial = emptyList())
     var selectedArchivo by remember { mutableStateOf<ArchivoItem?>(null) }
     var visorArchivo by remember { mutableStateOf<ArchivoItem?>(null) }
+    var fotoPendiente by remember { mutableStateOf<JavaFile?>(null) }
 
     val openDocumentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -66,33 +66,32 @@ fun File(
     }
 
     val takePictureLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bitmap: Bitmap? ->
-        if (bitmap != null) {
+        ActivityResultContracts.TakePicture()
+    ) { exito ->
+        val archivoFoto = fotoPendiente
+        if (exito && archivoFoto != null && archivoFoto.exists() && archivoFoto.length() > 0) {
             try {
-                val file = JavaFile(context.cacheDir, "foto_${System.currentTimeMillis()}.jpg")
-                val fos = FileOutputStream(file)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                fos.flush()
-                fos.close()
-
                 val uri = FileProvider.getUriForFile(
                     context,
                     "${context.packageName}.fileprovider",
-                    file
+                    archivoFoto
                 )
-                val fileName = file.name
                 val archivo = ArchivoItem(
-                    nombre = fileName,
+                    nombre = archivoFoto.name,
                     uri = uri.toString(),
                     tipo = "IMAGEN"
                 )
                 viewModel.insertArchivo(archivo)
                 Toast.makeText(context, "Foto guardada exitosamente", Toast.LENGTH_SHORT).show()
             } catch (_: Exception) {
+                archivoFoto.delete()
                 Toast.makeText(context, "Error al guardar la foto", Toast.LENGTH_SHORT).show()
             }
+        } else {
+            archivoFoto?.delete()
+            Toast.makeText(context, "No se tomó la foto", Toast.LENGTH_SHORT).show()
         }
+        fotoPendiente = null
     }
 
     Scaffold(
@@ -103,7 +102,30 @@ fun File(
             ) {
                 FloatingActionButton(
                     onClick = {
-                        takePictureLauncher.launch(null)
+                        var archivoFoto: JavaFile? = null
+                        try {
+                            archivoFoto = JavaFile(context.filesDir, "foto_${System.currentTimeMillis()}.jpg")
+                            if (!archivoFoto.exists()) archivoFoto.createNewFile()
+                            fotoPendiente = archivoFoto
+                            val uriFoto = FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                archivoFoto
+                            )
+                            takePictureLauncher.launch(uriFoto)
+                        } catch (_: ActivityNotFoundException) {
+                            archivoFoto?.delete()
+                            fotoPendiente = null
+                            Toast.makeText(
+                                context,
+                                "No hay una cámara disponible en este dispositivo",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } catch (_: Exception) {
+                            archivoFoto?.delete()
+                            fotoPendiente = null
+                            Toast.makeText(context, "No se pudo abrir la cámara", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 ) {
@@ -171,7 +193,7 @@ fun File(
                                 "PDF" -> Icons.Default.PictureAsPdf
                                 "IMAGEN" -> Icons.Default.Image
                                 "WORD", "EXCEL", "POWERPOINT" -> Icons.Default.Description
-                                else -> Icons.Default.InsertDriveFile
+                                else -> Icons.AutoMirrored.Filled.InsertDriveFile
                             }
 
                             Card(
@@ -213,6 +235,14 @@ fun File(
                                         onClick = {
                                             coroutineScope.launch {
                                                 viewModel.deleteArchivo(archivo.id)
+                                                val uri = archivo.uri?.let { Uri.parse(it) }
+                                                if (uri != null && uri.authority == "${context.packageName}.fileprovider") {
+                                                    val nombre = uri.lastPathSegment
+                                                    if (nombre != null) {
+                                                        val fisico = JavaFile(context.filesDir, nombre)
+                                                        if (fisico.exists()) fisico.delete()
+                                                    }
+                                                }
                                             }
                                         }
                                     ) {

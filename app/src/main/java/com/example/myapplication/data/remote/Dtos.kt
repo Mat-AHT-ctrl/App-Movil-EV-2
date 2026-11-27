@@ -31,6 +31,27 @@ data class RegisterRequestDto(
     val perfil: String    // INSPECTORIA | DOCENTE | UTP | DIRECCION | PIE
 )
 
+// ---------- Recuperación / cambio de contraseña ----------
+
+data class ForgotPasswordRequestDto(val email: String)
+
+data class ForgotPasswordResponseDto(
+    val mensaje: String? = null,
+    val codigoDemo: String? = null
+)
+
+data class ResetPasswordRequestDto(
+    val email: String,
+    val codigo: String,
+    val nuevaPassword: String
+)
+
+data class ChangePasswordRequestDto(
+    val email: String,
+    val passwordActual: String,
+    val nuevaPassword: String
+)
+
 // ---------- Espacios ----------
 
 data class EspacioDto(

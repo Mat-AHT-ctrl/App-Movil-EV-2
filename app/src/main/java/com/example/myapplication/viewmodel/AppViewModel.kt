@@ -15,7 +15,9 @@ import com.example.myapplication.data.remote.BloqueoDto
 import com.example.myapplication.data.remote.BloqueoRequestDto
 import com.example.myapplication.data.remote.EspacioDto
 import com.example.myapplication.data.remote.EstadoMapper
+import com.example.myapplication.data.remote.ForgotPasswordResponseDto
 import com.example.myapplication.data.remote.LoginResponseDto
+import com.example.myapplication.data.remote.NotificacionDto
 import com.example.myapplication.data.remote.ReservaDto
 import com.example.myapplication.data.remote.ReservaRequestDto
 import com.example.myapplication.data.remote.toEspacio
@@ -76,6 +78,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var usuarioRemoto: LoginResponseDto? by mutableStateOf(null)
         private set
 
+    /** Notificaciones del usuario y contador de no leídas (campana del TopAppBar). */
+    var notificaciones by mutableStateOf<List<NotificacionDto>>(emptyList())
+        private set
+    var conteoNoLeidas by mutableStateOf(0L)
+        private set
+
     /** true cuando se entro sin conexion, usando la copia local de Room. */
     var modoOffline by mutableStateOf(false)
         private set
@@ -125,6 +133,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ===== NOTIFICACIONES =====
+
+    /** Carga notificaciones y el conteo de no leídas del usuario remoto. */
+    suspend fun cargarNotificaciones() {
+        val usuarioId = usuarioRemoto?.id ?: return
+        when (val resultado = backend.listarNotificaciones(usuarioId)) {
+            is ApiResult.Ok -> notificaciones = resultado.data
+            is ApiResult.Error -> Unit
+        }
+        when (val resultado = backend.contarNoLeidas(usuarioId)) {
+            is ApiResult.Ok -> conteoNoLeidas = resultado.data
+            is ApiResult.Error -> Unit
+        }
+    }
+
+    /** Marca una notificación como leída y actualiza el badge localmente. */
+    fun marcarNotificacionLeida(id: String) {
+        viewModelScope.launch {
+            when (val resultado = backend.marcarLeida(id)) {
+                is ApiResult.Ok -> {
+                    var eraNoLeida = false
+                    notificaciones = notificaciones.map { notif ->
+                        if (notif.id == id && !notif.leida) {
+                            eraNoLeida = true
+                            notif.copy(leida = true)
+                        } else notif
+                    }
+                    if (eraNoLeida) {
+                        conteoNoLeidas = (conteoNoLeidas - 1).coerceAtLeast(0L)
+                    }
+                }
+                is ApiResult.Error -> Unit
+            }
+        }
+    }
+
     // ===== SESIÓN PERSISTENTE =====
 
     /** Guarda la sesión activa en SharedPreferences. */
@@ -166,6 +210,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 actualizado
             }
             _currentUser = local
+            cargarNotificaciones()
         }
         modoOffline = modOffline
         if (!modoOffline) {
@@ -237,6 +282,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _currentUser = local
                 guardarSesion()
+                cargarNotificaciones()
                 LoginResult.Ok
             }
 
@@ -277,11 +323,49 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    // ===== RECUPERACIÓN / CAMBIO DE CONTRASEÑA =====
+
+    suspend fun solicitarResetPassword(email: String): ApiResult<ForgotPasswordResponseDto> =
+        backend.solicitarResetPassword(email.trim())
+
+    suspend fun confirmarResetPassword(
+        email: String,
+        codigo: String,
+        nuevaPassword: String
+    ): ApiResult<Unit> {
+        val resultado = backend.confirmarResetPassword(email.trim(), codigo, nuevaPassword)
+        if (resultado is ApiResult.Ok) actualizarPasswordLocal(email, nuevaPassword)
+        return resultado
+    }
+
+    suspend fun cambiarPassword(
+        email: String,
+        passwordActual: String,
+        nuevaPassword: String
+    ): ApiResult<Unit> {
+        val resultado = backend.cambiarPassword(email.trim(), passwordActual, nuevaPassword)
+        if (resultado is ApiResult.Ok) actualizarPasswordLocal(email, nuevaPassword)
+        return resultado
+    }
+
+    /** Mantiene el espejo de Room sincronizado con el backend tras un cambio. */
+    private suspend fun actualizarPasswordLocal(email: String, nuevaPassword: String) {
+        val dao = database.usuarioDao()
+        val usuario = dao.getByEmail(email.trim().lowercase()) ?: return
+        val actualizado = usuario.copy(password = nuevaPassword)
+        dao.update(actualizado)
+        if (_currentUser?.email.equals(usuario.email, ignoreCase = true)) {
+            _currentUser = actualizado
+        }
+    }
+
     fun logout() {
         limpiarSesion()
         _currentUser = null
         usuarioRemoto = null
         modoOffline = false
+        notificaciones = emptyList()
+        conteoNoLeidas = 0L
         currentScreen = "login"
         espacioSeleccionado = null
     }
@@ -423,6 +507,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             database.reservaDao().getByUsuario(usuarioIdLocal)
         } else emptyList()
         return if (locales.isNotEmpty()) locales.map { it.aVista() } else mias.map { it.aVista() }
+    }
+
+    private fun ordenarHistorial(lista: List<ReservaVista>): List<ReservaVista> =
+        lista.sortedWith(
+            compareByDescending<ReservaVista> { it.fecha }
+                .thenByDescending { it.horaInicio }
+        )
+
+    /** Historial completo: admin ve todas; usuario solo las suyas (cualquier estado). */
+    suspend fun obtenerHistorialReservas(): List<ReservaVista> {
+        val remotas = when (val r = backend.listarReservas()) {
+            is ApiResult.Ok -> r.data
+            is ApiResult.Error -> emptyList()
+        }
+
+        if (esAdmin) {
+            val historial = if (remotas.isEmpty()) {
+                database.reservaDao().getAll().map { it.aVista() }
+            } else {
+                remotas.map { it.aVista() }
+            }
+            return ordenarHistorial(historial)
+        }
+
+        val mias = if (usuarioRemoto != null) {
+            remotas.filter { it.usuarioId == usuarioRemoto?.id }
+        } else remotas
+        mias.forEach { guardarReservaLocal(it) }
+
+        val usuarioIdLocal = usuarioLocalId()
+        val locales = if (usuarioIdLocal > 0) {
+            database.reservaDao().getByUsuario(usuarioIdLocal)
+        } else emptyList()
+        val historial = if (locales.isNotEmpty()) locales.map { it.aVista() } else mias.map { it.aVista() }
+        return ordenarHistorial(historial)
     }
 
     /** Panel Inspectoría: pendientes del backend con fallback local. */

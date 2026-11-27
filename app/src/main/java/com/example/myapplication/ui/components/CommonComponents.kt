@@ -29,7 +29,7 @@ fun BadgeEstadoEspacio(estado: String, darkTheme: Boolean = false) {
         "FUERA_DE_SERVICIO" -> if (darkTheme) StatusGrayBgDark to StatusGrayFgDark else StatusGrayBgLight to StatusGrayFgLight
         else -> if (darkTheme) StatusBlueBgDark to StatusBlueFgDark else StatusBlueBgLight to StatusBlueFgLight
     }
-    PillBadge(texto = estado.capitalize(), bg = bg, fg = fg, darkTheme = darkTheme)
+    PillBadge(texto = estado.replaceFirstChar { it.uppercase() }, bg = bg, fg = fg, darkTheme = darkTheme)
 }
 
 /**
@@ -45,7 +45,7 @@ fun BadgeEstadoReserva(estado: String, darkTheme: Boolean = false) {
         "FINALIZADA" -> if (darkTheme) StatusBlueBgDark to StatusBlueFgDark else StatusBlueBgLight to StatusBlueFgLight
         else -> if (darkTheme) StatusGrayBgDark to StatusGrayFgDark else StatusGrayBgLight to StatusGrayFgLight
     }
-    PillBadge(texto = estado.capitalize(), bg = bg, fg = fg, darkTheme = darkTheme)
+    PillBadge(texto = estado.replaceFirstChar { it.uppercase() }, bg = bg, fg = fg, darkTheme = darkTheme)
 }
 
 /**

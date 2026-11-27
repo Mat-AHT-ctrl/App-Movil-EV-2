@@ -13,7 +13,7 @@ object DatabaseProvider {
                 AppDatabase::class.java,
                 "colegio_ev2_db"
             )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = false)
                 .build()
             INSTANCE = instance
             instance

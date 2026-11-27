@@ -146,7 +146,7 @@ fun Catalogo(
                         ubicacion = espacio.ubicacion,
                         capacidad = espacio.capacidad,
                         estado = espacio.estado,
-                        darkTheme = false,
+                        darkTheme = viewModel.darkTheme,
                         onClick = { onEspacioSelected(espacio) }
                     )
                 }

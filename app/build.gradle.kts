@@ -24,7 +24,7 @@ val hayFirmaRelease = releaseStoreFile != null && releaseStoreFile!!.exists()
 //   .\gradlew.bat :app:assembleDebug -PBACKEND_URL=http://10.0.2.2:8080/
 //   (10.0.2.2 = localhost del PC visto desde el emulador)
 val backendUrl: String = (project.findProperty("BACKEND_URL") as String?)
-    ?: "https://app-movil-ev-2-l0m4.onrender.com/"
+    ?: "https://app-movil-ev-2.onrender.com/"
 
 android {
     // El codigo vive en com.example.myapplication: alineamos el namespace

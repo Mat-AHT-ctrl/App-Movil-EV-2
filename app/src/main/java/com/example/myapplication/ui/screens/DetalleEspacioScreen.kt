@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
@@ -17,14 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.remote.ApiResult
+import com.example.myapplication.data.remote.BackendRepository
 import com.example.myapplication.model.Espacio
 import com.example.myapplication.ui.components.BadgeEstadoEspacio
 import com.example.myapplication.viewmodel.AppViewModel
 import com.example.myapplication.utils.DateTimeUtils
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -39,7 +37,6 @@ fun DetalleEspacioScreen(
     onSolicitar: (fecha: String, horaInicio: String, horaTermino: String) -> Unit,
     onVolver: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val darkTheme = viewModel.darkTheme
 
     var fechaSeleccionada by remember {
@@ -47,12 +44,11 @@ fun DetalleEspacioScreen(
     }
     var indicesSeleccionados by remember { mutableStateOf<List<Int>>(emptyList()) }
     var errorBloques by remember { mutableStateOf<String?>(null) }
-    var mostrandoFormulario by remember { mutableStateOf(false) }
     var reservasExistentes by remember { mutableStateOf(emptyList<String>()) }
 
     val partesHorario = espacio.horarioFuncionamiento.split(" - ")
-    val horaApertura = partesHorario[0]
-    val horaCierre = partesHorario[1]
+    val horaApertura = partesHorario.getOrNull(0)?.trim()?.takeIf { it.isNotBlank() } ?: "08:00"
+    val horaCierre = partesHorario.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() } ?: "18:00"
 
     val horariosDisponibles = remember(horaApertura, horaCierre) {
         DateTimeUtils.generarHorariosBloques(horaApertura, horaCierre)
@@ -80,13 +76,35 @@ fun DetalleEspacioScreen(
     }
 
     LaunchedEffect(fechaSeleccionada) {
-        coroutineScope.launch {
-            val fechaDb = fechaSeleccionada.format(fechaDbFormatter)
-            val reservas = viewModel.getReservasByEspacioYFecha(espacio.id, fechaDb)
-            reservasExistentes = reservas.map { r ->
-                "${r.horaInicio} - ${r.horaTermino}"
-            }
+        val fechaDb = fechaSeleccionada.format(fechaDbFormatter)
+        val rangos = mutableListOf<String>()
+
+        // Reservas locales del solicitante.
+        viewModel.getReservasByEspacioYFecha(espacio.id, fechaDb).forEach { r ->
+            rangos += "${r.horaInicio} - ${r.horaTermino}"
         }
+
+        // Bloqueos de Inspectoría.
+        when (val resultado = viewModel.listarBloqueos()) {
+            is ApiResult.Ok -> resultado.data
+                .filter { it.espacioId == espacio.id && it.fecha == fechaDb }
+                .forEach { b -> rangos += "${b.horaInicio} - ${b.horaTermino}" }
+            is ApiResult.Error -> Unit
+        }
+
+        // Reservas remotas de otros docentes (excepto rechazadas/canceladas).
+        when (val resultado = BackendRepository().listarReservas()) {
+            is ApiResult.Ok -> resultado.data
+                .filter {
+                    it.espacioId == espacio.id &&
+                            it.fecha == fechaDb &&
+                            it.estado.uppercase() !in setOf("RECHAZADA", "CANCELADA")
+                }
+                .forEach { r -> rangos += "${r.horaInicio} - ${r.horaTermino}" }
+            is ApiResult.Error -> Unit
+        }
+
+        reservasExistentes = rangos.distinct()
     }
 
     val puedeReservar = espacio.estado.uppercase() == "DISPONIBLE"
@@ -431,167 +449,4 @@ fun DetalleEspacioScreen(
         }
     }
 
-    if (mostrandoFormulario && indicesSeleccionados.isNotEmpty()) {
-        val primero = horariosDisponibles[indicesSeleccionados.first()]
-        val ultimo = horariosDisponibles[indicesSeleccionados.last()]
-        val horaInicio = primero.split(" - ")[0]
-        val horaTermino = DateTimeUtils.calcularHoraTermino(ultimo)
-
-        FormularioSolicitudDialog(
-            espacio = espacio,
-            fecha = fechaSeleccionada,
-            horaInicio = horaInicio,
-            horaTermino = horaTermino,
-            onDismiss = { mostrandoFormulario = false },
-            onEnviar = { actividad, curso, asistentes, observaciones ->
-                coroutineScope.launch {
-                    val resultado = viewModel.crearReservaBackend(
-                        espacioId = espacio.id,
-                        espacioNombre = espacio.nombre,
-                        usuarioId = viewModel.usuarioRemoto?.id ?: viewModel.currentUser?.id.toString() ?: "",
-                        solicitanteNombre = viewModel.usuarioRemoto?.nombre ?: viewModel.currentUser?.nombre ?: "",
-                        perfilSolicitante = viewModel.usuarioRemoto?.perfil ?: viewModel.currentUser?.rol ?: "DOCENTE",
-                        fecha = fechaSeleccionada.format(fechaDbFormatter),
-                        horaInicio = horaInicio,
-                        horaTermino = horaTermino,
-                        actividad = actividad,
-                        cursoGrupo = curso,
-                        asistentes = asistentes,
-                        observaciones = observaciones
-                    )
-                    when (resultado) {
-                        is ApiResult.Ok<*> -> {
-                            mostrandoFormulario = false
-                            onSolicitar(
-                                fechaSeleccionada.format(fechaDisplayFormatter),
-                                horaInicio,
-                                horaTermino
-                            )
-                        }
-                        is ApiResult.Error -> {
-                            errorBloques = resultado.mensaje
-                        }
-                    }
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun FormularioSolicitudDialog(
-    espacio: Espacio,
-    fecha: LocalDate,
-    horaInicio: String,
-    horaTermino: String,
-    onDismiss: () -> Unit,
-    onEnviar: (String, String, Int, String) -> Unit
-) {
-    var actividad by remember { mutableStateOf("") }
-    var cursoGrupo by remember { mutableStateOf("") }
-    var asistentesTxt by remember { mutableStateOf("") }
-    var observaciones by remember { mutableStateOf("") }
-    var errorForm by remember { mutableStateOf<String?>(null) }
-
-    val asistentesInt = asistentesTxt.toIntOrNull() ?: 0
-    val excedeCapacidad = asistentesInt > espacio.capacidad
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Nueva Solicitud de Espacio",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        Text(
-                            text = espacio.nombre,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "${fecha.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))} · $horaInicio a $horaTermino",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = actividad,
-                    onValueChange = { actividad = it },
-                    label = { Text("Actividad a realizar *") },
-                    placeholder = { Text("Ej. Taller de lectura comprensiva") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = cursoGrupo,
-                    onValueChange = { cursoGrupo = it },
-                    label = { Text("Curso o grupo participante *") },
-                    placeholder = { Text("Ej. 5° Básico A / Equipo PIE") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = asistentesTxt,
-                    onValueChange = { asistentesTxt = it.filter { c -> c.isDigit() } },
-                    label = { Text("Cantidad aprox. asistentes ($asistentesInt/${espacio.capacidad}) *") },
-                    isError = excedeCapacidad,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = observaciones,
-                    onValueChange = { observaciones = it },
-                    label = { Text("Observaciones (opcional)") },
-                    maxLines = 2,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                if (errorForm != null) {
-                    Text(
-                        text = errorForm!!,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                when {
-                    actividad.trim().length < 3 -> errorForm = "Ingresa la actividad a realizar."
-                    cursoGrupo.trim().isEmpty() -> errorForm = "Ingresa el curso o grupo participante."
-                    asistentesInt <= 0 -> errorForm = "Ingresa la cantidad aproximada de asistentes."
-                    excedeCapacidad -> errorForm = "Supera la capacidad máxima (${espacio.capacidad} personas)."
-                    else -> {
-                        errorForm = null
-                        onEnviar(actividad, cursoGrupo, asistentesInt, observaciones)
-                    }
-                }
-            }) {
-                Text("Enviar solicitud")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
 }

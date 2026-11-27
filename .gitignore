@@ -1,20 +1,56 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-/docs/
-/app/keystore/
-.vscode/
+# ==========================================
+# Logs de errores JVM (Crashes / Replay)
+# ==========================================
 hs_err_pid*.log
 replay_pid*.log
+*.log
+
+# ==========================================
+# Compilación y Cachés de Gradle / Kotlin
+# ==========================================
+.gradle/
+**/build/
+**/out/
+.kotlin/
+captures/
+
+# ==========================================
+# Archivos Sensibles, Keystores y Credenciales
+# ==========================================
+*.jks
+*.keystore
+keystore.properties
+*credenciales*.txt
+*secret*
+.env
+.env.*
+
+# ==========================================
+# Base de datos local H2 (Desarrollo)
+# ==========================================
+backend/data/*.mv.db
+backend/data/*.trace.db
+*.db
+
+# ==========================================
+# Documentación y material de entrega (no versionado)
+# ==========================================
+docs/
+
+# ==========================================
+# Archivos temporales y respaldos comprimidos
+# ==========================================
+docs/*.zip
+*.zip
+*.bak
+*.tmp
+
+# ==========================================
+# IDEs y Sistema Operativo
+# ==========================================
+.idea/
+*.iml
+.vscode/
+local.properties
+.DS_Store
+Thumbs.db

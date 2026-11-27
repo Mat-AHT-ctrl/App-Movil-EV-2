@@ -263,7 +263,10 @@ fun Admin(
                             readOnly = true,
                             label = { Text("Espacio") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandirEspacios) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                            modifier = Modifier.fillMaxWidth().menuAnchor(
+                                MenuAnchorType.PrimaryNotEditable,
+                                enabled = true
+                            )
                         )
                         ExposedDropdownMenu(
                             expanded = expandirEspacios,

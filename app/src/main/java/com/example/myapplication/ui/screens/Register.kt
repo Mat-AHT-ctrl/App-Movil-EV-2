@@ -81,12 +81,15 @@ fun Register(
             onExpandedChange = { expandedCargo = it }
         ) {
             OutlinedTextField(
-                value = cargos.first { it.first == cargo }.second,
+                value = cargos.firstOrNull { it.first == cargo }?.second ?: "Docente",
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Cargo") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCargo) },
-                modifier = Modifier.fillMaxWidth().menuAnchor()
+                modifier = Modifier.fillMaxWidth().menuAnchor(
+                    MenuAnchorType.PrimaryNotEditable,
+                    enabled = true
+                )
             )
             ExposedDropdownMenu(
                 expanded = expandedCargo,
